@@ -14,6 +14,7 @@ import RegisterPage from "./pages/RegisterPage.jsx";
 import StudentDashboardPage from "./pages/StudentDashboardPage.jsx";
 import DiscoverBooksPage from "./pages/student/DiscoverBooksPage.jsx";
 import StudentBookDetailsPage from "./pages/student/StudentBookDetailsPage.jsx";
+import MyReservationsPage from "./pages/student/MyReservationsPage.jsx";
 
 // Component Preview
 import ComponentPreviewPage from "./pages/ComponentPreviewPage.jsx";
@@ -43,6 +44,7 @@ function App() {
           <Route path="/student/dashboard" element={<StudentDashboardPage />} />
           <Route path="/student/discover" element={<DiscoverBooksPage />} />
           <Route path="/student/books/:bookId" element={<StudentBookDetailsPage />} />
+          <Route path="/student/reservations" element={<MyReservationsPage />} />
         </Route>
 
         {/* Temporary Component Preview */}

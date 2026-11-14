@@ -7,7 +7,7 @@ import StatusBadge from "../../components/common/StatusBadge";
 import EmptyState from "../../components/common/EmptyState";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
-import { getBookById } from "../../services/studentService";
+import { getBookById, reserveBook } from "../../services/studentService";
 
 import "./StudentBookDetailsPage.css";
 
@@ -29,6 +29,26 @@ function StudentBookDetailsPage() {
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Reservation state
+  const [reserving, setReserving] = useState(false);
+  const [reserveMessage, setReserveMessage] = useState("");
+  const [reserveError, setReserveError] = useState("");
+
+  const handleReserve = async () => {
+    setReserving(true);
+    setReserveMessage("");
+    setReserveError("");
+
+    try {
+      const data = await reserveBook(book.book_id);
+      setReserveMessage(data.message);
+    } catch (err) {
+      setReserveError(err.message);
+    } finally {
+      setReserving(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -107,6 +127,30 @@ function StudentBookDetailsPage() {
               <p className="details-copies">
                 {book.available_copies} of {book.total_copies} copies available
               </p>
+
+              <div className="reserve-box">
+                <button
+                  type="button"
+                  className="reserve-button"
+                  onClick={handleReserve}
+                  disabled={reserving || Boolean(reserveMessage)}
+                >
+                  {reserving
+                    ? "Please wait..."
+                    : book.is_available
+                      ? "Reserve this book"
+                      : "Join waiting list"}
+                </button>
+
+                {reserveMessage && (
+                  <p className="reserve-success">
+                    {reserveMessage}{" "}
+                    <Link to="/student/reservations">View my reservations</Link>
+                  </p>
+                )}
+
+                {reserveError && <p className="reserve-error">{reserveError}</p>}
+              </div>
 
               <dl className="details-meta">
                 {book.isbn && (

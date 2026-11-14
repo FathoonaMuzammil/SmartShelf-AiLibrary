@@ -4,13 +4,15 @@ const API_BASE_URL = "http://localhost:5000/api";
 const getAuthToken = () => sessionStorage.getItem("smartshelf_token");
 
 // Common helper for all student API calls
-const request = async (path) => {
+const request = async (path, options = {}) => {
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method || "GET",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${getAuthToken()}`,
       },
+      body: options.body ? JSON.stringify(options.body) : undefined,
     });
 
     const data = await response.json();
@@ -32,6 +34,8 @@ const request = async (path) => {
   }
 };
 
+// ---------- Book discovery ----------
+
 // Subjects and topics for the filters
 export const getFilters = () => request("/student/filters");
 
@@ -52,3 +56,21 @@ export const getBooks = (filters = {}) => {
 
 // Single book details
 export const getBookById = (bookId) => request(`/student/books/${bookId}`);
+
+// ---------- Reservations ----------
+
+// Reserve a book (or join the waiting list)
+export const reserveBook = (bookId) =>
+  request("/student/reservations", {
+    method: "POST",
+    body: { book_id: bookId },
+  });
+
+// All reservations of the logged-in student
+export const getMyReservations = () => request("/student/reservations");
+
+// Cancel an active reservation
+export const cancelReservation = (reservationId) =>
+  request(`/student/reservations/${reservationId}/cancel`, {
+    method: "PATCH",
+  });
