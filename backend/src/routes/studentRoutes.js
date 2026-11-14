@@ -5,6 +5,7 @@ const studentController = require('../controllers/studentController');
 const reservationController = require('../controllers/reservationController');
 const borrowingController = require('../controllers/borrowingController');
 const feedbackController = require('../controllers/feedbackController');
+const dashboardController = require('../controllers/dashboardController');
 const authenticateToken = require('../middleware/authMiddleware');
 const authorizeRoles = require('../middleware/roleMiddleware');
 
@@ -36,6 +37,13 @@ router.get('/books/:bookId/feedback', feedbackController.getBookFeedback);
 router.put(
     '/books/:bookId/topics/:topicId/feedback',
     feedbackController.saveFeedback
+);
+
+// Dashboard and notifications
+router.get('/dashboard', dashboardController.getDashboard);
+router.patch(
+    '/notifications/read-all',
+    dashboardController.markAllNotificationsRead
 );
 
 module.exports = router;

@@ -92,3 +92,12 @@ export const saveFeedback = (bookId, topicId, rating, reviewText) =>
     method: "PUT",
     body: { rating, review_text: reviewText },
   });
+
+// ---------- Dashboard ----------
+
+// Summary, due soon, recommendations and notifications
+export const getDashboard = () => request("/student/dashboard");
+
+// Mark all notifications as read
+export const markAllNotificationsRead = () =>
+  request("/student/notifications/read-all", { method: "PATCH" });
