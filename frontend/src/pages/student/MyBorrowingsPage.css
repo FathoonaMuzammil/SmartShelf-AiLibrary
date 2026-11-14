@@ -1,0 +1,151 @@
+.borrow-heading h1 {
+  color: #526b55;
+  margin: 0 0 4px;
+}
+
+.borrow-heading p {
+  color: #6b7280;
+  margin: 0 0 20px;
+}
+
+.borrow-error {
+  background: #fbeaea;
+  color: #a33a3a;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.borrow-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.borrow-summary-card {
+  background: #ffffff;
+  border: 1px solid #e8eee5;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.borrow-summary-card strong {
+  font-size: 26px;
+  color: #526b55;
+}
+
+.borrow-summary-card span {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.text-overdue {
+  color: #b3362f !important;
+}
+
+.borrow-group {
+  color: #526b55;
+  font-size: 17px;
+  margin: 24px 0 12px;
+}
+
+.borrow-muted {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 2px 0;
+}
+
+.borrow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.borrow-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e8eee5;
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+
+.borrow-card-overdue {
+  border-color: #e7b9b5;
+  background: #fff8f7;
+}
+
+.borrow-card h3 {
+  font-size: 16px;
+  color: #1f2d22;
+  margin: 0 0 4px;
+}
+
+.borrow-card a {
+  text-decoration: none;
+}
+
+.borrow-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.borrow-due {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.due-ok {
+  background: #e8eee5;
+  color: #526b55;
+}
+
+.due-soon {
+  background: #fdf3df;
+  color: #8a6a1c;
+}
+
+.due-overdue {
+  background: #fbe3e1;
+  color: #b3362f;
+}
+
+.borrow-table-wrapper {
+  overflow-x: auto;
+  background: #ffffff;
+  border: 1px solid #e8eee5;
+  border-radius: 14px;
+}
+
+.borrow-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.borrow-table th,
+.borrow-table td {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eef2ec;
+}
+
+.borrow-table th {
+  color: #526b55;
+  font-weight: 600;
+}
+
+.borrow-table a {
+  color: #1f2d22;
+  text-decoration: none;
+}

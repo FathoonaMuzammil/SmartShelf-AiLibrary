@@ -3,6 +3,7 @@ const router = express.Router();
 
 const studentController = require('../controllers/studentController');
 const reservationController = require('../controllers/reservationController');
+const borrowingController = require('../controllers/borrowingController');
 const authenticateToken = require('../middleware/authMiddleware');
 const authorizeRoles = require('../middleware/roleMiddleware');
 
@@ -25,5 +26,8 @@ router.patch(
     '/reservations/:reservationId/cancel',
     reservationController.cancelReservation
 );
+
+// Borrowings (current loans and history)
+router.get('/borrowings', borrowingController.getMyBorrowings);
 
 module.exports = router;

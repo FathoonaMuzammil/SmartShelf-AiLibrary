@@ -74,3 +74,8 @@ export const cancelReservation = (reservationId) =>
   request(`/student/reservations/${reservationId}/cancel`, {
     method: "PATCH",
   });
+
+// ---------- Borrowings ----------
+
+// Current loans, due dates and borrowing history
+export const getMyBorrowings = () => request("/student/borrowings");
