@@ -7,6 +7,7 @@ import {
   Bookmark,
   Clock,
   Heart,
+  Sparkles,
   Users,
   Library,
   BookPlus,
@@ -27,6 +28,7 @@ const navigation = {
     { label: "Reservations", icon: Bookmark, path: "/student/reservations" },
     { label: "Reading History", icon: Clock, path: "/student/history" },
     { label: "My Favourites", icon: Heart, path: "/student/favourites" },
+        { label: "AI Assistant", icon: Sparkles, path: "/student/ai-assistant" },
   ],
 
   lecturer: [

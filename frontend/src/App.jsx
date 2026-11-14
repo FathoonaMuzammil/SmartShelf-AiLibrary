@@ -16,6 +16,7 @@ import DiscoverBooksPage from "./pages/student/DiscoverBooksPage.jsx";
 import StudentBookDetailsPage from "./pages/student/StudentBookDetailsPage.jsx";
 import MyReservationsPage from "./pages/student/MyReservationsPage.jsx";
 import MyBorrowingsPage from "./pages/student/MyBorrowingsPage.jsx";
+import AIAssistantPage from "./pages/student/AIAssistantPage.jsx";
 
 // Component Preview
 import ComponentPreviewPage from "./pages/ComponentPreviewPage.jsx";
@@ -47,6 +48,7 @@ function App() {
           <Route path="/student/books/:bookId" element={<StudentBookDetailsPage />} />
           <Route path="/student/reservations" element={<MyReservationsPage />} />
           <Route path="/student/borrowings" element={<MyBorrowingsPage />} />
+          <Route path="/student/ai-assistant" element={<AIAssistantPage />} />
         </Route>
 
         {/* Temporary Component Preview */}
