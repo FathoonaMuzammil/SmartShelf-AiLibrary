@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { BookOpen, MapPin, Search } from "lucide-react";
 
 import DashboardLayout from "../../components/dashboard/DashboardLayout";
@@ -208,6 +209,13 @@ function DiscoverBooksPage() {
                       <MapPin size={14} /> {book.shelf_locations}
                     </p>
                   )}
+                  
+                  <Link
+                    to={`/student/books/${book.book_id}`}
+                    className="discover-view-link"
+                  >
+                    View details →
+                  </Link>
                 </div>
               </article>
             ))}

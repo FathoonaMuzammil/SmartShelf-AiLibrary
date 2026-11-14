@@ -1,0 +1,192 @@
+.details-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #526b55;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+
+.details-main {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 28px;
+  background: #ffffff;
+  border: 1px solid #e8eee5;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 700px) {
+  .details-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.details-cover {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #829b83, #526b55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  text-align: center;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.details-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.details-summary h1 {
+  color: #1f2d22;
+  font-size: 24px;
+  margin: 0 0 4px;
+}
+
+.details-authors {
+  color: #6b7280;
+  margin: 0 0 12px;
+}
+
+.details-copies {
+  color: #4b5563;
+  font-size: 14px;
+  margin: 10px 0 16px;
+}
+
+.details-meta {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 6px 12px;
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+
+.details-meta dt {
+  color: #6b7280;
+}
+
+.details-meta dd {
+  margin: 0;
+  color: #1f2d22;
+}
+
+.details-description {
+  color: #374151;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.details-section {
+  background: #ffffff;
+  border: 1px solid #e8eee5;
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.details-section h2 {
+  color: #526b55;
+  font-size: 17px;
+  margin: 0 0 14px;
+}
+
+.details-muted {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.details-table-wrapper {
+  overflow-x: auto;
+}
+
+.details-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.details-table th,
+.details-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef2ec;
+}
+
+.details-table th {
+  color: #526b55;
+  font-weight: 600;
+}
+
+.details-topic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.details-topic {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: #f8f6ef;
+  border-radius: 10px;
+}
+
+.details-topic h3 {
+  font-size: 15px;
+  margin: 0;
+  color: #1f2d22;
+}
+
+.details-topic p {
+  font-size: 14px;
+  margin: 4px 0 0;
+}
+
+.details-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #526b55;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.details-level {
+  align-self: flex-start;
+  background: #e8eee5;
+  color: #526b55;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* "View details" link used on the Discover Books cards */
+.discover-view-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: #526b55;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.discover-view-link:hover {
+  text-decoration: underline;
+}
