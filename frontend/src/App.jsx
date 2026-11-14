@@ -12,6 +12,7 @@ import RegisterPage from "./pages/RegisterPage.jsx";
 
 // Dashboard Pages
 import StudentDashboardPage from "./pages/StudentDashboardPage.jsx";
+import DiscoverBooksPage from "./pages/student/DiscoverBooksPage.jsx";
 
 // Component Preview
 import ComponentPreviewPage from "./pages/ComponentPreviewPage.jsx";
@@ -39,6 +40,7 @@ function App() {
         {/* Protected Student Routes */}
         <Route element={<ProtectedRoute allowedRoles={["student"]} />}>
           <Route path="/student/dashboard" element={<StudentDashboardPage />} />
+          <Route path="/student/discover" element={<DiscoverBooksPage />} />
         </Route>
 
         {/* Temporary Component Preview */}

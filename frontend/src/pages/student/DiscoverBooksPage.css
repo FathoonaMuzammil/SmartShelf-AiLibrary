@@ -1,0 +1,126 @@
+.discover-heading h1 {
+  color: #526b55;
+  margin: 0 0 4px;
+}
+
+.discover-heading p {
+  color: #6b7280;
+  margin: 0 0 20px;
+}
+
+.discover-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.discover-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.discover-filters .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.discover-filters label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #526b55;
+}
+
+.discover-filters select {
+  padding: 10px 12px;
+  border: 1px solid #d6ddd3;
+  border-radius: 10px;
+  background: #ffffff;
+  font-size: 14px;
+}
+
+.discover-error {
+  background: #fbeaea;
+  color: #a33a3a;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.discover-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.discover-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 20px;
+}
+
+.discover-card {
+  background: #ffffff;
+  border: 1px solid #e8eee5;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.discover-cover {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #829b83, #526b55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.discover-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.discover-info h3 {
+  font-size: 15px;
+  margin: 0 0 4px;
+  color: #1f2d22;
+}
+
+.discover-author {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.discover-copies {
+  font-size: 13px;
+  color: #4b5563;
+  margin: 8px 0 4px;
+}
+
+.discover-shelf {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #526b55;
+  margin: 0;
+}

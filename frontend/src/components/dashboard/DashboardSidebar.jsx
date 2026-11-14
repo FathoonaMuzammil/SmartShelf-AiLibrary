@@ -22,7 +22,7 @@ import {
 const navigation = {
   student: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/student/dashboard" },
-    { label: "Explore Books", icon: Search, path: "/explore" },
+    { label: "Discover Books", icon: Search, path: "/student/discover" },
     { label: "My Borrowings", icon: BookOpen, path: "/student/borrowings" },
     { label: "Reservations", icon: Bookmark, path: "/student/reservations" },
     { label: "Reading History", icon: Clock, path: "/student/history" },
