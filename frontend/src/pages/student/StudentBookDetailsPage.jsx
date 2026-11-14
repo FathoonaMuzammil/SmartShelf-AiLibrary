@@ -9,6 +9,8 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 
 import { getBookById, reserveBook } from "../../services/studentService";
 
+import BookFeedback from "./BookFeedback";
+
 import "./StudentBookDetailsPage.css";
 
 // Turn "all_levels" into "All levels"
@@ -34,6 +36,13 @@ function StudentBookDetailsPage() {
   const [reserving, setReserving] = useState(false);
   const [reserveMessage, setReserveMessage] = useState("");
   const [reserveError, setReserveError] = useState("");
+
+  // Reload the book so the average ratings update after saving feedback
+  const refreshBook = () => {
+    getBookById(bookId)
+      .then((data) => setBook(data.book))
+      .catch(() => {});
+  };
 
   const handleReserve = async () => {
     setReserving(true);
@@ -294,6 +303,13 @@ function StudentBookDetailsPage() {
               </div>
             )}
           </section>
+
+          {/* Student ratings and reviews */}
+          <BookFeedback
+            bookId={book.book_id}
+            topics={book.topics}
+            onSaved={refreshBook}
+          />
         </>
       )}
     </DashboardLayout>

@@ -79,3 +79,16 @@ export const cancelReservation = (reservationId) =>
 
 // Current loans, due dates and borrowing history
 export const getMyBorrowings = () => request("/student/borrowings");
+
+// ---------- Ratings and reviews ----------
+
+// My feedback and all reviews of a book
+export const getBookFeedback = (bookId) =>
+  request(`/student/books/${bookId}/feedback`);
+
+// Create or edit my rating (1-5) and optional review for a topic
+export const saveFeedback = (bookId, topicId, rating, reviewText) =>
+  request(`/student/books/${bookId}/topics/${topicId}/feedback`, {
+    method: "PUT",
+    body: { rating, review_text: reviewText },
+  });
