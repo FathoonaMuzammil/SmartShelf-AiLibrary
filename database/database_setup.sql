@@ -1,5 +1,6 @@
 USE smartshelf_db;
 
+-- 1. USERS
 CREATE TABLE Users (
     user_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(150) NOT NULL,
@@ -37,6 +38,8 @@ CREATE TABLE Users (
         )
 ) ENGINE=InnoDB;
 
+
+-- 2. BOOKS
 CREATE TABLE Books (
     book_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -58,6 +61,8 @@ CREATE TABLE Books (
 
 ) ENGINE=InnoDB;
 
+
+-- 3. BOOK COPIES
 CREATE TABLE BookCopies (
     copy_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -87,6 +92,8 @@ CREATE TABLE BookCopies (
 
 ) ENGINE=InnoDB;
 
+
+-- 4. SUBJECTS
 CREATE TABLE Subjects (
     subject_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -98,6 +105,8 @@ CREATE TABLE Subjects (
 
 ) ENGINE=InnoDB;
 
+
+-- 5. TOPICS
 CREATE TABLE Topics (
     topic_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -118,6 +127,8 @@ CREATE TABLE Topics (
 
 ) ENGINE=InnoDB;
 
+
+-- 6. BOOK TOPICS
 CREATE TABLE BookTopics (
     book_id INT UNSIGNED NOT NULL,
     topic_id INT UNSIGNED NOT NULL,
@@ -141,6 +152,7 @@ CREATE TABLE BookTopics (
 ) ENGINE=InnoDB;
 
 
+-- 7. LECTURER RECOMMENDATIONS
 CREATE TABLE LecturerRecommendations (
     recommendation_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -184,6 +196,8 @@ CREATE TABLE LecturerRecommendations (
 
 ) ENGINE=InnoDB;
 
+
+-- 8. BOOK RATINGS
 CREATE TABLE BookRatings (
     rating_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -225,6 +239,8 @@ CREATE TABLE BookRatings (
 
 ) ENGINE=InnoDB;
 
+
+-- 9. BOOK REVIEWS
 CREATE TABLE BookReviews (
     review_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -263,6 +279,8 @@ CREATE TABLE BookReviews (
 
 ) ENGINE=InnoDB;
 
+
+-- 10. RESERVATIONS
 CREATE TABLE Reservations (
     reservation_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -307,6 +325,8 @@ CREATE TABLE Reservations (
 
 ) ENGINE=InnoDB;
 
+
+-- 11. BORROWINGS
 CREATE TABLE Borrowings (
     borrowing_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -385,6 +405,8 @@ CREATE TABLE Borrowings (
 
 ) ENGINE=InnoDB;
 
+
+-- 12. NOTIFICATIONS
 CREATE TABLE Notifications (
     notification_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -420,6 +442,8 @@ CREATE TABLE Notifications (
 
 ) ENGINE=InnoDB;
 
+
+-- 13. AI CONVERSATIONS
 CREATE TABLE AIConversations (
     conversation_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
@@ -440,37 +464,15 @@ CREATE TABLE AIConversations (
 
     INDEX idx_ai_conversations_user (user_id)
 
-) ENGINE=InnoDB;CREATE TABLE AIConversations (
-    conversation_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-
-    user_id INT UNSIGNED NOT NULL,
-
-    conversation_title VARCHAR(200) NULL,
-
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL
-        DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_ai_conversations_user
-        FOREIGN KEY (user_id)
-        REFERENCES Users(user_id)
-        ON DELETE RESTRICT
-        ON UPDATE CASCADE,
-
-    INDEX idx_ai_conversations_user (user_id)
-
 ) ENGINE=InnoDB;
 
+
+-- 14. AI CHAT MESSAGES
 CREATE TABLE AIChatMessages (
     message_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-
     conversation_id INT UNSIGNED NOT NULL,
-
     sender ENUM('user', 'assistant') NOT NULL,
-
     message_text TEXT NOT NULL,
-
     sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_ai_chat_messages_conversation
@@ -483,6 +485,8 @@ CREATE TABLE AIChatMessages (
 
 ) ENGINE=InnoDB;
 
+
+-- 15. ANNOUNCEMENTS
 CREATE TABLE Announcements (
     announcement_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
