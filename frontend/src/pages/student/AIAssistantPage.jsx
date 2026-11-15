@@ -23,6 +23,44 @@ const GREETING = {
   books: [],
 };
 
+// Show **bold**, *italic* and bullet lists nicely
+const renderInline = (text) =>
+  text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+      return <em key={index}>{part.slice(1, -1)}</em>;
+    }
+
+    return part;
+  });
+
+const renderText = (text) =>
+  text.split("\n").map((line, index) => {
+    const bullet = line.match(/^(\s*)\*\s+(.*)$/);
+
+    if (bullet) {
+      const level = bullet[1].length >= 2 ? 1 : 0;
+
+      return (
+        <div
+          key={index}
+          style={{ paddingLeft: `${12 + level * 18}px` }}
+        >
+          • {renderInline(bullet[2])}
+        </div>
+      );
+    }
+
+    if (line.trim() === "") {
+      return <div key={index} className="ai-gap" />;
+    }
+
+    return <div key={index}>{renderInline(line)}</div>;
+  });
+
 function AIAssistantPage() {
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
@@ -134,7 +172,7 @@ function AIAssistantPage() {
               </div>
 
               <div className="ai-content">
-                <div className="ai-bubble">{message.text}</div>
+             <div className="ai-bubble">{renderText(message.text)}</div>   
 
                 {message.books.length > 0 && (
                   <div className="ai-books">
