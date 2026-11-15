@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, Bell } from "lucide-react";
 
 import ProfileDropdown from "./ProfileDropdown";
 import NotificationPanel from "./NotificationPanel";
+import { getDashboard } from "../../services/studentService.js";
 
 function DashboardTopbar({
   title = "Dashboard",
@@ -10,12 +11,11 @@ function DashboardTopbar({
   role = "student",
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(2);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const user = JSON.parse(sessionStorage.getItem("smartshelf_user") || "null");
 
   const displayName = user?.full_name || "SmartShelf User";
-
   const displayRole = user?.role || role;
 
   const initials = displayName
@@ -25,6 +25,31 @@ function DashboardTopbar({
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  // Fetch real unread notification count for students
+  useEffect(() => {
+    if (displayRole !== "student") return;
+
+    let isMounted = true;
+
+    getDashboard()
+      .then((data) => {
+        if (isMounted) {
+          setUnreadCount(data.summary?.unread_notifications ?? 0);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to fetch unread notifications:", error);
+
+        if (isMounted) {
+          setUnreadCount(0);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [displayRole]);
 
   return (
     <header className="dashboard-topbar">
@@ -55,7 +80,7 @@ function DashboardTopbar({
           >
             <Bell size={20} />
 
-            {unreadCount > 0 && (
+            {displayRole === "student" && unreadCount > 0 && (
               <span className="notification-count">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
