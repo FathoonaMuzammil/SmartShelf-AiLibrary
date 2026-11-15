@@ -36,18 +36,35 @@ const initialNotifications = [
   },
 ];
 
+const user = JSON.parse(sessionStorage.getItem("smartshelf_user") || "null");
+
+const STORAGE_KEY = `smartshelf_notifications_${user?.role || "guest"}_${user?.user_id || "unknown"}`;
+
 function NotificationPanel({ onClose, onUnreadCountChange }) {
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : initialNotifications;
+    } catch {
+      return initialNotifications;
+    }
+  });
 
   const unreadCount = notifications.filter(
     (notification) => notification.unread,
   ).length;
 
-  // Send the latest unread count to the DashboardTopbar.
+  // Save notifications whenever their status changes.
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+  }, [notifications]);
+
+  // Update unread count in DashboardTopbar.
   useEffect(() => {
     onUnreadCountChange?.(unreadCount);
   }, [unreadCount, onUnreadCountChange]);
 
+  // Mark one notification as read.
   const markAsRead = (id) => {
     setNotifications((previousNotifications) =>
       previousNotifications.map((notification) =>
@@ -58,6 +75,7 @@ function NotificationPanel({ onClose, onUnreadCountChange }) {
     );
   };
 
+  // Mark all notifications as read.
   const markAllAsRead = () => {
     setNotifications((previousNotifications) =>
       previousNotifications.map((notification) => ({
@@ -67,6 +85,7 @@ function NotificationPanel({ onClose, onUnreadCountChange }) {
     );
   };
 
+  // Select an icon based on notification type.
   const getNotificationIcon = (type) => {
     switch (type) {
       case "reservation":
@@ -133,9 +152,7 @@ function NotificationPanel({ onClose, onUnreadCountChange }) {
 
               <div className="notification-details">
                 <h4>{notification.title}</h4>
-
                 <p>{notification.message}</p>
-
                 <span className="notification-time">{notification.time}</span>
               </div>
 
