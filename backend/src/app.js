@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const errorMiddleware = require('./middleware/errorMiddleware');
 const authRoutes = require('./routes/authRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const studentRoutes = require('./routes/studentRoutes');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes);
 
 // AI Assistant API routes
 app.use('/api/ai', aiRoutes);
+app.use('/api/student', studentRoutes);
 
 // Basic API health check
 app.get('/api/health', (req, res) => {
