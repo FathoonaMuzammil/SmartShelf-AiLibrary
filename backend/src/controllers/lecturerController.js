@@ -252,6 +252,8 @@ const createRecommendation = async (req, res, next) => {
         next(error);
     }
 };
+
+
 // ==========================================
 // LIST MY RECOMMENDATIONS
 // Only the logged-in lecturer's own recommendations
@@ -295,6 +297,8 @@ const getMyRecommendations = async (req, res, next) => {
         next(error);
     }
 };
+
+
 // ==========================================
 // UPDATE MY RECOMMENDATION
 // Only the lecturer who created it can edit it
@@ -407,11 +411,97 @@ const deleteRecommendation = async (req, res, next) => {
     }
 };
 
+
+// ==========================================
+// STUDENT FEEDBACK ON MY RECOMMENDATIONS
+// Ratings and reviews for the books and topics
+// that the logged-in lecturer has recommended
+// ==========================================
+
+const getFeedback = async (req, res, next) => {
+    try {
+        const lecturerId = req.user.userId;
+
+        // Average rating per recommendation
+        const [summaries] = await db.execute(
+            `SELECT
+                lr.recommendation_id,
+                lr.book_id,
+                b.title,
+                b.authors,
+                lr.topic_id,
+                t.topic_name,
+                s.subject_name,
+                ROUND(AVG(r.rating), 1) AS average_rating,
+                COUNT(r.rating_id) AS rating_count
+             FROM LecturerRecommendations lr
+             JOIN Books b ON b.book_id = lr.book_id
+             JOIN Topics t ON t.topic_id = lr.topic_id
+             JOIN Subjects s ON s.subject_id = t.subject_id
+             LEFT JOIN BookRatings r
+                ON r.book_id = lr.book_id AND r.topic_id = lr.topic_id
+             WHERE lr.lecturer_id = ?
+             GROUP BY lr.recommendation_id, lr.book_id, b.title, b.authors,
+                      lr.topic_id, t.topic_name, s.subject_name, lr.created_at
+             ORDER BY lr.created_at DESC`,
+            [lecturerId]
+        );
+
+        // Written reviews (student names are not exposed)
+        const [reviews] = await db.execute(
+            `SELECT
+                rv.review_id,
+                rv.book_id,
+                rv.topic_id,
+                rv.review_text,
+                rv.updated_at,
+                r.rating
+             FROM BookReviews rv
+             JOIN LecturerRecommendations lr
+                ON lr.book_id = rv.book_id AND lr.topic_id = rv.topic_id
+             LEFT JOIN BookRatings r
+                ON r.student_id = rv.student_id
+               AND r.book_id = rv.book_id
+               AND r.topic_id = rv.topic_id
+             WHERE lr.lecturer_id = ?
+             ORDER BY rv.updated_at DESC`,
+            [lecturerId]
+        );
+
+        const feedback = summaries.map((summary) => ({
+            ...summary,
+            average_rating: summary.average_rating === null
+                ? null
+                : Number(summary.average_rating),
+            rating_count: Number(summary.rating_count),
+            reviews: reviews
+                .filter((review) =>
+                    review.book_id === summary.book_id
+                    && review.topic_id === summary.topic_id)
+                .map((review) => ({
+                    review_id: review.review_id,
+                    review_text: review.review_text,
+                    rating: review.rating,
+                    updated_at: review.updated_at
+                }))
+        }));
+
+        return res.status(200).json({
+            success: true,
+            feedback
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getFilters,
     getBooks,
     createRecommendation,
     getMyRecommendations,
     updateRecommendation,
-    deleteRecommendation
+    deleteRecommendation,
+    getFeedback
 };

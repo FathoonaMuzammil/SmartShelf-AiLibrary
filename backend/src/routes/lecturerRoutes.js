@@ -23,4 +23,8 @@ router.get('/recommendations', lecturerController.getMyRecommendations);
 // Edit and delete my own recommendation
 router.put('/recommendations/:recommendationId', lecturerController.updateRecommendation);
 router.delete('/recommendations/:recommendationId', lecturerController.deleteRecommendation);
+
+// Student feedback on my recommendations
+router.get('/feedback', lecturerController.getFeedback);
+
 module.exports = router;

@@ -73,3 +73,6 @@ export const deleteRecommendation = (recommendationId) =>
   request(`/lecturer/recommendations/${recommendationId}`, {
     method: "DELETE",
   });
+
+// Student ratings and reviews for my recommendations
+export const getFeedback = () => request("/lecturer/feedback");
