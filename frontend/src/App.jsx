@@ -17,6 +17,8 @@ import StudentBookDetailsPage from "./pages/student/StudentBookDetailsPage.jsx";
 import MyReservationsPage from "./pages/student/MyReservationsPage.jsx";
 import MyBorrowingsPage from "./pages/student/MyBorrowingsPage.jsx";
 import AIAssistantPage from "./pages/student/AIAssistantPage.jsx";
+import LecturerDashboardPage from "./pages/lecturer/LecturerDashboardPage.jsx";
+import LecturerBrowseBooksPage from "./pages/lecturer/LecturerBrowseBooksPage.jsx";
 
 // Component Preview
 import ComponentPreviewPage from "./pages/ComponentPreviewPage.jsx";
@@ -49,6 +51,12 @@ function App() {
           <Route path="/student/reservations" element={<MyReservationsPage />} />
           <Route path="/student/borrowings" element={<MyBorrowingsPage />} />
           <Route path="/student/ai-assistant" element={<AIAssistantPage />} />
+        </Route>
+
+        {/* Protected Lecturer Routes */}
+        <Route element={<ProtectedRoute allowedRoles={["lecturer"]} />}>
+          <Route path="/lecturer/dashboard" element={<LecturerDashboardPage />} />
+          <Route path="/lecturer/books" element={<LecturerBrowseBooksPage />} />
         </Route>
 
         {/* Temporary Component Preview */}

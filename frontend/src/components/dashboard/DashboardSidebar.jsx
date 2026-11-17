@@ -33,16 +33,21 @@ const navigation = {
 
   lecturer: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/lecturer/dashboard" },
-    { label: "Explore Books", icon: Search, path: "/explore" },
+    { label: "Browse Books", icon: Search, path: "/lecturer/books" },
     {
-      label: "Recommendations",
+      label: "Create Recommendation",
       icon: BookPlus,
-      path: "/lecturer/recommendations",
+      path: "/lecturer/recommendations/new",
     },
     {
       label: "My Recommendations",
       icon: ClipboardList,
       path: "/lecturer/my-recommendations",
+    },
+    {
+      label: "Student Feedback",
+      icon: BarChart3,
+      path: "/lecturer/feedback",
     },
   ],
 
