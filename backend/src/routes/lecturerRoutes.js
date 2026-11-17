@@ -20,4 +20,7 @@ router.post('/recommendations', lecturerController.createRecommendation);
 // List my own recommendations
 router.get('/recommendations', lecturerController.getMyRecommendations);
 
+// Edit and delete my own recommendation
+router.put('/recommendations/:recommendationId', lecturerController.updateRecommendation);
+router.delete('/recommendations/:recommendationId', lecturerController.deleteRecommendation);
 module.exports = router;

@@ -295,11 +295,123 @@ const getMyRecommendations = async (req, res, next) => {
         next(error);
     }
 };
+// ==========================================
+// UPDATE MY RECOMMENDATION
+// Only the lecturer who created it can edit it
+// Body: explanation, relevant_chapters, difficulty_level
+// ==========================================
+
+const updateRecommendation = async (req, res, next) => {
+    try {
+        const lecturerId = req.user.userId;
+        const recommendationId = Number(req.params.recommendationId);
+
+        if (!Number.isInteger(recommendationId) || recommendationId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid recommendation.'
+            });
+        }
+
+        const body = req.body || {};
+
+        const explanation = typeof body.explanation === 'string'
+            ? body.explanation.trim()
+            : '';
+
+        const relevantChapters = typeof body.relevant_chapters === 'string'
+            && body.relevant_chapters.trim().length > 0
+            ? body.relevant_chapters.trim()
+            : null;
+
+        const difficultyLevel = body.difficulty_level;
+
+        if (!explanation) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please explain why this book is useful.'
+            });
+        }
+
+        if (!DIFFICULTY_LEVELS.includes(difficultyLevel)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please select a valid difficulty level.'
+            });
+        }
+
+        // lecturer_id in the WHERE clause stops a lecturer editing someone else's recommendation
+        const [result] = await db.execute(
+            `UPDATE LecturerRecommendations
+             SET explanation = ?, relevant_chapters = ?, difficulty_level = ?
+             WHERE recommendation_id = ? AND lecturer_id = ?`,
+            [explanation, relevantChapters, difficultyLevel,
+             recommendationId, lecturerId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Recommendation not found.'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Recommendation updated successfully.'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// ==========================================
+// DELETE MY RECOMMENDATION
+// Only the lecturer who created it can delete it
+// ==========================================
+
+const deleteRecommendation = async (req, res, next) => {
+    try {
+        const lecturerId = req.user.userId;
+        const recommendationId = Number(req.params.recommendationId);
+
+        if (!Number.isInteger(recommendationId) || recommendationId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid recommendation.'
+            });
+        }
+
+        const [result] = await db.execute(
+            `DELETE FROM LecturerRecommendations
+             WHERE recommendation_id = ? AND lecturer_id = ?`,
+            [recommendationId, lecturerId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Recommendation not found.'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Recommendation deleted successfully.'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 
 module.exports = {
     getFilters,
     getBooks,
     createRecommendation,
-    getMyRecommendations
-
+    getMyRecommendations,
+    updateRecommendation,
+    deleteRecommendation
 };

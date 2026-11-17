@@ -60,3 +60,16 @@ export const createRecommendation = (recommendation) =>
 
 // All recommendations created by the logged-in lecturer
 export const getMyRecommendations = () => request("/lecturer/recommendations");
+
+// Edit one of my recommendations
+export const updateRecommendation = (recommendationId, data) =>
+  request(`/lecturer/recommendations/${recommendationId}`, {
+    method: "PUT",
+    body: data,
+  });
+
+// Delete one of my recommendations
+export const deleteRecommendation = (recommendationId) =>
+  request(`/lecturer/recommendations/${recommendationId}`, {
+    method: "DELETE",
+  });
