@@ -19,6 +19,7 @@ import MyBorrowingsPage from "./pages/student/MyBorrowingsPage.jsx";
 import AIAssistantPage from "./pages/student/AIAssistantPage.jsx";
 import LecturerDashboardPage from "./pages/lecturer/LecturerDashboardPage.jsx";
 import LecturerBrowseBooksPage from "./pages/lecturer/LecturerBrowseBooksPage.jsx";
+import LecturerCreateRecommendationPage from "./pages/lecturer/LecturerCreateRecommendationPage.jsx";
 
 // Component Preview
 import ComponentPreviewPage from "./pages/ComponentPreviewPage.jsx";
@@ -57,6 +58,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={["lecturer"]} />}>
           <Route path="/lecturer/dashboard" element={<LecturerDashboardPage />} />
           <Route path="/lecturer/books" element={<LecturerBrowseBooksPage />} />
+          <Route path="/lecturer/recommendations/new" element={<LecturerCreateRecommendationPage />} />
         </Route>
 
         {/* Temporary Component Preview */}

@@ -50,3 +50,13 @@ export const getBooks = (filters = {}) => {
 
   return request(`/lecturer/books${query ? `?${query}` : ""}`);
 };
+
+// Create a new recommendation
+export const createRecommendation = (recommendation) =>
+  request("/lecturer/recommendations", {
+    method: "POST",
+    body: recommendation,
+  });
+
+// All recommendations created by the logged-in lecturer
+export const getMyRecommendations = () => request("/lecturer/recommendations");
