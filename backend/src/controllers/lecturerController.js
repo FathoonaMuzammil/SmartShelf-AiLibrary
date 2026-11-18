@@ -566,6 +566,115 @@ const getDashboard = async (req, res, next) => {
         next(error);
     }
 };
+// ==========================================
+// LIST MY NOTIFICATIONS
+// Only the logged-in lecturer's own notifications
+// ==========================================
+
+const getNotifications = async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+
+        const [notifications] = await db.execute(
+            `SELECT
+                notification_id,
+                notification_type,
+                title,
+                message,
+                is_read,
+                created_at
+             FROM Notifications
+             WHERE user_id = ?
+             ORDER BY created_at DESC, notification_id DESC
+             LIMIT 50`,
+            [userId]
+        );
+
+        const [unreadRows] = await db.execute(
+            `SELECT COUNT(*) AS unread
+             FROM Notifications
+             WHERE user_id = ? AND is_read = FALSE`,
+            [userId]
+        );
+
+        return res.status(200).json({
+            success: true,
+            unread_count: Number(unreadRows[0].unread),
+            notifications: notifications.map((item) => ({
+                ...item,
+                is_read: Boolean(item.is_read)
+            }))
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// ==========================================
+// MARK ONE NOTIFICATION AS READ
+// user_id in the WHERE clause: only my own notification
+// ==========================================
+
+const markNotificationRead = async (req, res, next) => {
+    try {
+        const notificationId = Number(req.params.notificationId);
+
+        if (!Number.isInteger(notificationId) || notificationId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid notification.'
+            });
+        }
+
+        const [result] = await db.execute(
+            `UPDATE Notifications
+             SET is_read = TRUE
+             WHERE notification_id = ? AND user_id = ?`,
+            [notificationId, req.user.userId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Notification not found.'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Notification marked as read.'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// ==========================================
+// MARK ALL MY NOTIFICATIONS AS READ
+// ==========================================
+
+const markAllNotificationsRead = async (req, res, next) => {
+    try {
+        await db.execute(
+            `UPDATE Notifications
+             SET is_read = TRUE
+             WHERE user_id = ? AND is_read = FALSE`,
+            [req.user.userId]
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'All notifications marked as read.'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 
 module.exports = {
     getFilters,
@@ -575,5 +684,8 @@ module.exports = {
     updateRecommendation,
     deleteRecommendation,
     getFeedback,
-    getDashboard
+    getDashboard,
+    getNotifications,
+    markNotificationRead,
+    markAllNotificationsRead
 };

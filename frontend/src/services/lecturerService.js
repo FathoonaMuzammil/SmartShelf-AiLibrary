@@ -79,3 +79,16 @@ export const getFeedback = () => request("/lecturer/feedback");
 
 // Dashboard statistics for the logged-in lecturer
 export const getDashboard = () => request("/lecturer/dashboard");
+
+// Notifications of the logged-in lecturer
+export const getNotifications = () => request("/lecturer/notifications");
+
+// Mark one notification as read
+export const markNotificationRead = (notificationId) =>
+  request(`/lecturer/notifications/${notificationId}/read`, {
+    method: "PATCH",
+  });
+
+// Mark all notifications as read
+export const markAllNotificationsRead = () =>
+  request("/lecturer/notifications/read-all", { method: "PATCH" });

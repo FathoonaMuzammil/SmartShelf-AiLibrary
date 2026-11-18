@@ -22,6 +22,7 @@ import LecturerBrowseBooksPage from "./pages/lecturer/LecturerBrowseBooksPage.js
 import LecturerCreateRecommendationPage from "./pages/lecturer/LecturerCreateRecommendationPage.jsx";
 import LecturerMyRecommendationsPage from "./pages/lecturer/LecturerMyRecommendationsPage.jsx";
 import LecturerStudentFeedbackPage from "./pages/lecturer/LecturerStudentFeedbackPage.jsx";
+import LecturerNotificationsPage from "./pages/lecturer/LecturerNotificationsPage.jsx";
 
 // Component Preview
 import ComponentPreviewPage from "./pages/ComponentPreviewPage.jsx";
@@ -63,6 +64,7 @@ function App() {
           <Route path="/lecturer/recommendations/new" element={<LecturerCreateRecommendationPage />} />
           <Route path="/lecturer/my-recommendations" element={<LecturerMyRecommendationsPage />} />
           <Route path="/lecturer/feedback" element={<LecturerStudentFeedbackPage />} />
+          <Route path="/lecturer/notifications" element={<LecturerNotificationsPage />} />
         </Route>
 
         {/* Temporary Component Preview */}

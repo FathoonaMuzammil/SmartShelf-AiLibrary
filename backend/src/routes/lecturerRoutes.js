@@ -30,4 +30,9 @@ router.get('/feedback', lecturerController.getFeedback);
 // Dashboard statistics
 router.get('/dashboard', lecturerController.getDashboard);
 
+// Notifications
+router.get('/notifications', lecturerController.getNotifications);
+router.patch('/notifications/read-all', lecturerController.markAllNotificationsRead);
+router.patch('/notifications/:notificationId/read', lecturerController.markNotificationRead);
+
 module.exports = router;
