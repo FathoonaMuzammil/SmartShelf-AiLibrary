@@ -76,3 +76,6 @@ export const deleteRecommendation = (recommendationId) =>
 
 // Student ratings and reviews for my recommendations
 export const getFeedback = () => request("/lecturer/feedback");
+
+// Dashboard statistics for the logged-in lecturer
+export const getDashboard = () => request("/lecturer/dashboard");

@@ -496,6 +496,77 @@ const getFeedback = async (req, res, next) => {
     }
 };
 
+
+// ==========================================
+// DASHBOARD STATISTICS
+// Summary of the logged-in lecturer's own activity
+// ==========================================
+
+const getDashboard = async (req, res, next) => {
+    try {
+        const lecturerId = req.user.userId;
+
+        // Number of recommendations and number of different books
+        const [counts] = await db.execute(
+            `SELECT
+                COUNT(*) AS total_recommendations,
+                COUNT(DISTINCT book_id) AS recommended_books
+             FROM LecturerRecommendations
+             WHERE lecturer_id = ?`,
+            [lecturerId]
+        );
+
+        // Ratings given by students on this lecturer's recommended book + topic pairs
+        const [ratings] = await db.execute(
+            `SELECT
+                COUNT(r.rating_id) AS total_ratings,
+                ROUND(AVG(r.rating), 1) AS average_rating
+             FROM BookRatings r
+             WHERE EXISTS (
+                SELECT 1
+                FROM LecturerRecommendations lr
+                WHERE lr.lecturer_id = ?
+                  AND lr.book_id = r.book_id
+                  AND lr.topic_id = r.topic_id
+             )`,
+            [lecturerId]
+        );
+
+        // Five most recent recommendations
+        const [recent] = await db.execute(
+            `SELECT
+                lr.recommendation_id,
+                b.title,
+                t.topic_name,
+                lr.difficulty_level,
+                lr.created_at
+             FROM LecturerRecommendations lr
+             JOIN Books b ON b.book_id = lr.book_id
+             JOIN Topics t ON t.topic_id = lr.topic_id
+             WHERE lr.lecturer_id = ?
+             ORDER BY lr.created_at DESC
+             LIMIT 5`,
+            [lecturerId]
+        );
+
+        return res.status(200).json({
+            success: true,
+            summary: {
+                total_recommendations: Number(counts[0].total_recommendations),
+                recommended_books: Number(counts[0].recommended_books),
+                total_ratings: Number(ratings[0].total_ratings),
+                average_rating: ratings[0].average_rating === null
+                    ? null
+                    : Number(ratings[0].average_rating)
+            },
+            recent_recommendations: recent
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getFilters,
     getBooks,
@@ -503,5 +574,6 @@ module.exports = {
     getMyRecommendations,
     updateRecommendation,
     deleteRecommendation,
-    getFeedback
+    getFeedback,
+    getDashboard
 };

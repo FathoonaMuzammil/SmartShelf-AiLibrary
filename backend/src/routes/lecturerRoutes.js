@@ -27,4 +27,7 @@ router.delete('/recommendations/:recommendationId', lecturerController.deleteRec
 // Student feedback on my recommendations
 router.get('/feedback', lecturerController.getFeedback);
 
+// Dashboard statistics
+router.get('/dashboard', lecturerController.getDashboard);
+
 module.exports = router;
