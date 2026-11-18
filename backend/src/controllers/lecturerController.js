@@ -1,5 +1,7 @@
 const db = require('../config/db');
 
+const authService = require('../services/authService');
+
 // ==========================================
 // GET SUBJECTS AND TOPICS
 // Used by the Create Recommendation form
@@ -676,6 +678,141 @@ const markAllNotificationsRead = async (req, res, next) => {
     }
 };
 
+// ==========================================
+// MY PROFILE
+// ==========================================
+
+const getProfile = async (req, res, next) => {
+    try {
+        const [users] = await db.execute(
+            `SELECT user_id, full_name, email, role, created_at
+             FROM Users
+             WHERE user_id = ?`,
+            [req.user.userId]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found.'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            profile: users[0]
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// ==========================================
+// UPDATE MY NAME
+// Email and role cannot be changed here
+// ==========================================
+
+const updateProfile = async (req, res, next) => {
+    try {
+        const body = req.body || {};
+
+        const fullName = typeof body.full_name === 'string'
+            ? body.full_name.trim()
+            : '';
+
+        if (fullName.length < 2 || fullName.length > 150) {
+            return res.status(400).json({
+                success: false,
+                message: 'Name must be between 2 and 150 characters.'
+            });
+        }
+
+        await db.execute(
+            'UPDATE Users SET full_name = ? WHERE user_id = ?',
+            [fullName, req.user.userId]
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'Profile updated successfully.',
+            full_name: fullName
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// ==========================================
+// CHANGE MY PASSWORD
+// Current password must be verified first
+// ==========================================
+
+const changePassword = async (req, res, next) => {
+    try {
+        const body = req.body || {};
+        const currentPassword = body.current_password;
+        const newPassword = body.new_password;
+
+        if (typeof currentPassword !== 'string' || !currentPassword
+            || typeof newPassword !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide your current and new password.'
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'New password must contain at least 8 characters.'
+            });
+        }
+
+        const [users] = await db.execute(
+            'SELECT password_hash FROM Users WHERE user_id = ?',
+            [req.user.userId]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found.'
+            });
+        }
+
+        const matches = await authService.comparePassword(
+            currentPassword,
+            users[0].password_hash
+        );
+
+        if (!matches) {
+            return res.status(400).json({
+                success: false,
+                message: 'Current password is incorrect.'
+            });
+        }
+
+        const newHash = await authService.hashPassword(newPassword);
+
+        await db.execute(
+            'UPDATE Users SET password_hash = ? WHERE user_id = ?',
+            [newHash, req.user.userId]
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password changed successfully.'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getFilters,
     getBooks,
@@ -687,5 +824,8 @@ module.exports = {
     getDashboard,
     getNotifications,
     markNotificationRead,
-    markAllNotificationsRead
+    markAllNotificationsRead,
+    getProfile,
+    updateProfile,
+    changePassword
 };

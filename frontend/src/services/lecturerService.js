@@ -92,3 +92,14 @@ export const markNotificationRead = (notificationId) =>
 // Mark all notifications as read
 export const markAllNotificationsRead = () =>
   request("/lecturer/notifications/read-all", { method: "PATCH" });
+
+// Profile of the logged-in lecturer
+export const getProfile = () => request("/lecturer/profile");
+
+// Update my name
+export const updateProfile = (data) =>
+  request("/lecturer/profile", { method: "PUT", body: data });
+
+// Change my password
+export const changePassword = (data) =>
+  request("/lecturer/password", { method: "PUT", body: data });
