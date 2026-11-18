@@ -35,4 +35,9 @@ router.get('/notifications', lecturerController.getNotifications);
 router.patch('/notifications/read-all', lecturerController.markAllNotificationsRead);
 router.patch('/notifications/:notificationId/read', lecturerController.markNotificationRead);
 
+// Lecturer profile and password
+router.get('/profile', lecturerController.getProfile);
+router.put('/profile', lecturerController.updateProfile);
+router.put('/password', lecturerController.changePassword);
+
 module.exports = router;
