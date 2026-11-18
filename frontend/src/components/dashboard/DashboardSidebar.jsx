@@ -14,6 +14,8 @@ import {
   ClipboardList,
   BarChart3,
   Settings,
+  Bell,
+  User,
   HelpCircle,
   PanelLeftClose,
   PanelLeftOpen,
@@ -28,7 +30,7 @@ const navigation = {
     { label: "Reservations", icon: Bookmark, path: "/student/reservations" },
     { label: "Reading History", icon: Clock, path: "/student/history" },
     { label: "My Favourites", icon: Heart, path: "/student/favourites" },
-        { label: "AI Assistant", icon: Sparkles, path: "/student/ai-assistant" },
+    { label: "AI Assistant", icon: Sparkles, path: "/student/ai-assistant" },
   ],
 
   lecturer: [
@@ -48,6 +50,11 @@ const navigation = {
       label: "Student Feedback",
       icon: BarChart3,
       path: "/lecturer/feedback",
+    },
+    {
+      label: "Notifications",
+      icon: Bell,
+      path: "/lecturer/notifications",
     },
   ],
 
@@ -136,7 +143,7 @@ function DashboardSidebar({
       {/* Sidebar Bottom */}
       <div className="sidebar-bottom">
         <Link
-          to="/dashboard/settings"
+          to={normalizedRole === "lecturer" ? "/lecturer/settings" : "/dashboard/settings"}
           onClick={handleNavigation}
           className="sidebar-nav-item"
           title={!isOpen ? "Settings" : undefined}
@@ -144,6 +151,17 @@ function DashboardSidebar({
           <Settings size={19} strokeWidth={1.8} />
           {isOpen && <span>Settings</span>}
         </Link>
+                {normalizedRole === "lecturer" && (
+          <Link
+            to="/lecturer/profile"
+            onClick={handleNavigation}
+            className="sidebar-nav-item"
+            title={!isOpen ? "Profile" : undefined}
+          >
+            <User size={19} strokeWidth={1.8} />
+            {isOpen && <span>Profile</span>}
+          </Link>
+        )}
 
         <Link
           to="/help"
