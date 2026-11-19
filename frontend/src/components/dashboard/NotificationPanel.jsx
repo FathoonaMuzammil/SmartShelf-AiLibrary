@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import {
   Bell,
@@ -9,80 +10,145 @@ import {
   X,
 } from "lucide-react";
 
-const initialNotifications = [
-  {
-    id: 1,
-    type: "reservation",
-    title: "Reservation confirmed",
-    message: "Your reservation for Clean Code has been confirmed.",
-    time: "10 minutes ago",
-    unread: true,
-  },
-  {
-    id: 2,
-    type: "reminder",
-    title: "Book return reminder",
-    message: "Remember to return your borrowed book on time.",
-    time: "2 hours ago",
-    unread: true,
-  },
-  {
-    id: 3,
-    type: "welcome",
-    title: "Welcome to SmartShelf",
-    message: "Discover books and explore your university library.",
-    time: "Yesterday",
-    unread: false,
-  },
-];
+import {
+  getDashboard,
+  markAllNotificationsRead as markAllStudentNotificationsRead,
+} from "../../services/studentService.js";
 
-const user = JSON.parse(sessionStorage.getItem("smartshelf_user") || "null");
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead as markAllLecturerNotificationsRead,
+} from "../../services/lecturerService.js";
 
-const STORAGE_KEY = `smartshelf_notifications_${user?.role || "guest"}_${user?.user_id || "unknown"}`;
+// Convert the database date into a readable date and time.
+const formatNotificationTime = (createdAt) => {
+  if (!createdAt) return "";
 
-function NotificationPanel({ onClose, onUnreadCountChange }) {
-  const [notifications, setNotifications] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : initialNotifications;
-    } catch {
-      return initialNotifications;
-    }
-  });
+  const date = new Date(createdAt);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleString();
+};
+
+function NotificationPanel({
+  onClose,
+  onUnreadCountChange,
+  role = "student",
+}) {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Fetch notifications according to the logged-in user's role.
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchNotifications = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        let data;
+
+        if (role === "lecturer") {
+          data = await getNotifications();
+        } else {
+          data = await getDashboard();
+        }
+
+        if (!isMounted) return;
+
+        const formattedNotifications = (data.notifications || []).map(
+          (notification) => ({
+            id: notification.notification_id,
+            type: notification.notification_type || "default",
+            title: notification.title,
+            message: notification.message,
+            time: formatNotificationTime(notification.created_at),
+            unread: !notification.is_read,
+          }),
+        );
+
+        setNotifications(formattedNotifications);
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+
+        if (isMounted) {
+          setError(err.message || "Failed to load notifications.");
+          setNotifications([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchNotifications();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [role]);
 
   const unreadCount = notifications.filter(
     (notification) => notification.unread,
   ).length;
 
-  // Save notifications whenever their status changes.
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
-  }, [notifications]);
-
-  // Update unread count in DashboardTopbar.
+  // Send the latest unread count to DashboardTopbar.
   useEffect(() => {
     onUnreadCountChange?.(unreadCount);
   }, [unreadCount, onUnreadCountChange]);
 
-  // Mark one notification as read.
-  const markAsRead = (id) => {
-    setNotifications((previousNotifications) =>
-      previousNotifications.map((notification) =>
-        notification.id === id
-          ? { ...notification, unread: false }
-          : notification,
-      ),
-    );
+  // Mark one lecturer notification as read.
+  const handleMarkAsRead = async (id) => {
+    if (role !== "lecturer") return;
+
+    try {
+      await markNotificationRead(id);
+
+      setNotifications((previousNotifications) =>
+        previousNotifications.map((notification) =>
+          notification.id === id
+            ? { ...notification, unread: false }
+            : notification,
+        ),
+      );
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+      setError(err.message || "Could not update the notification.");
+    }
   };
 
-  // Mark all notifications as read.
-  const markAllAsRead = () => {
-    setNotifications((previousNotifications) =>
-      previousNotifications.map((notification) => ({
-        ...notification,
-        unread: false,
-      })),
-    );
+  // Mark all notifications as read for the current role.
+  const handleMarkAllAsRead = async () => {
+    if (unreadCount === 0 || actionLoading) return;
+
+    setActionLoading(true);
+    setError("");
+
+    try {
+      if (role === "lecturer") {
+        await markAllLecturerNotificationsRead();
+      } else {
+        await markAllStudentNotificationsRead();
+      }
+
+      setNotifications((previousNotifications) =>
+        previousNotifications.map((notification) => ({
+          ...notification,
+          unread: false,
+        })),
+      );
+    } catch (err) {
+      console.error("Failed to mark all notifications as read:", err);
+      setError(err.message || "Could not update notifications.");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Select an icon based on notification type.
@@ -128,17 +194,28 @@ function NotificationPanel({ onClose, onUnreadCountChange }) {
         <div className="notification-actions">
           <button
             type="button"
-            onClick={markAllAsRead}
-            disabled={unreadCount === 0}
+            onClick={handleMarkAllAsRead}
+            disabled={unreadCount === 0 || actionLoading}
           >
             <CheckCheck size={15} />
-            Mark all as read
+            {actionLoading ? "Updating..." : "Mark all as read"}
           </button>
         </div>
       )}
 
       <div className="notification-list">
-        {notifications.length > 0 ? (
+        {loading ? (
+          <div className="notification-empty">
+            <Bell size={30} />
+            <h4>Loading notifications...</h4>
+          </div>
+        ) : error && notifications.length === 0 ? (
+          <div className="notification-empty">
+            <Bell size={30} />
+            <h4>Unable to load notifications</h4>
+            <p>{error}</p>
+          </div>
+        ) : notifications.length > 0 ? (
           notifications.map((notification) => (
             <div
               key={notification.id}
@@ -153,14 +230,16 @@ function NotificationPanel({ onClose, onUnreadCountChange }) {
               <div className="notification-details">
                 <h4>{notification.title}</h4>
                 <p>{notification.message}</p>
-                <span className="notification-time">{notification.time}</span>
+                <span className="notification-time">
+                  {notification.time}
+                </span>
               </div>
 
-              {notification.unread && (
+              {role === "lecturer" && notification.unread && (
                 <button
                   type="button"
                   className="notification-read-button"
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => handleMarkAsRead(notification.id)}
                   aria-label={`Mark ${notification.title} as read`}
                   title="Mark as read"
                 >
@@ -181,6 +260,10 @@ function NotificationPanel({ onClose, onUnreadCountChange }) {
           </div>
         )}
       </div>
+
+      {error && notifications.length > 0 && (
+        <p role="alert">{error}</p>
+      )}
 
       <div className="notification-footer">
         <span>SmartShelf Notifications</span>

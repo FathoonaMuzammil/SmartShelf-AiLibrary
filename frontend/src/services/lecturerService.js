@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:5000/api";
+import API_BASE_URL from "./apiConfig.js";
 
 const getAuthToken = () => sessionStorage.getItem("smartshelf_token");
 

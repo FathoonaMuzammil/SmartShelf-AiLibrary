@@ -1,3 +1,4 @@
+
 const db = require('../config/db');
 
 const authService = require('../services/authService');
@@ -144,17 +145,13 @@ const getBooks = async (req, res, next) => {
 
 // ==========================================
 // CREATE A RECOMMENDATION
-// Body: book_id, topic_id, explanation,
-//       relevant_chapters (optional), difficulty_level
 // ==========================================
 
 const DIFFICULTY_LEVELS = ['beginner', 'intermediate', 'advanced', 'all_levels'];
 
 const createRecommendation = async (req, res, next) => {
     try {
-        // The lecturer always comes from the verified token, never from the request body
         const lecturerId = req.user.userId;
-
         const body = req.body || {};
 
         const bookId = Number(body.book_id);
@@ -171,7 +168,6 @@ const createRecommendation = async (req, res, next) => {
 
         const difficultyLevel = body.difficulty_level;
 
-        // Validate input
         if (!Number.isInteger(bookId) || bookId <= 0
             || !Number.isInteger(topicId) || topicId <= 0) {
             return res.status(400).json({
@@ -194,7 +190,6 @@ const createRecommendation = async (req, res, next) => {
             });
         }
 
-        // The book must exist in the library catalogue
         const [books] = await db.execute(
             'SELECT book_id FROM Books WHERE book_id = ?',
             [bookId]
@@ -207,7 +202,6 @@ const createRecommendation = async (req, res, next) => {
             });
         }
 
-        // The topic must exist
         const [topics] = await db.execute(
             'SELECT topic_id FROM Topics WHERE topic_id = ?',
             [topicId]
@@ -220,7 +214,6 @@ const createRecommendation = async (req, res, next) => {
             });
         }
 
-        // Do not allow the same lecturer to recommend the same book for the same topic twice
         const [existing] = await db.execute(
             `SELECT recommendation_id
              FROM LecturerRecommendations
@@ -258,7 +251,6 @@ const createRecommendation = async (req, res, next) => {
 
 // ==========================================
 // LIST MY RECOMMENDATIONS
-// Only the logged-in lecturer's own recommendations
 // ==========================================
 
 const getMyRecommendations = async (req, res, next) => {
@@ -303,8 +295,7 @@ const getMyRecommendations = async (req, res, next) => {
 
 // ==========================================
 // UPDATE MY RECOMMENDATION
-// Only the lecturer who created it can edit it
-// Body: explanation, relevant_chapters, difficulty_level
+// Handles unchanged values correctly
 // ==========================================
 
 const updateRecommendation = async (req, res, next) => {
@@ -346,20 +337,35 @@ const updateRecommendation = async (req, res, next) => {
             });
         }
 
-        // lecturer_id in the WHERE clause stops a lecturer editing someone else's recommendation
         const [result] = await db.execute(
             `UPDATE LecturerRecommendations
              SET explanation = ?, relevant_chapters = ?, difficulty_level = ?
              WHERE recommendation_id = ? AND lecturer_id = ?`,
-            [explanation, relevantChapters, difficultyLevel,
-             recommendationId, lecturerId]
+            [
+                explanation,
+                relevantChapters,
+                difficultyLevel,
+                recommendationId,
+                lecturerId
+            ]
         );
 
+        // Zero affected rows does not always mean the record is missing.
         if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Recommendation not found.'
-            });
+            const [existing] = await db.execute(
+                `SELECT recommendation_id
+                 FROM LecturerRecommendations
+                 WHERE recommendation_id = ? AND lecturer_id = ?
+                 LIMIT 1`,
+                [recommendationId, lecturerId]
+            );
+
+            if (existing.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Recommendation not found.'
+                });
+            }
         }
 
         return res.status(200).json({
@@ -375,7 +381,6 @@ const updateRecommendation = async (req, res, next) => {
 
 // ==========================================
 // DELETE MY RECOMMENDATION
-// Only the lecturer who created it can delete it
 // ==========================================
 
 const deleteRecommendation = async (req, res, next) => {
@@ -415,16 +420,13 @@ const deleteRecommendation = async (req, res, next) => {
 
 
 // ==========================================
-// STUDENT FEEDBACK ON MY RECOMMENDATIONS
-// Ratings and reviews for the books and topics
-// that the logged-in lecturer has recommended
+// STUDENT FEEDBACK
 // ==========================================
 
 const getFeedback = async (req, res, next) => {
     try {
         const lecturerId = req.user.userId;
 
-        // Average rating per recommendation
         const [summaries] = await db.execute(
             `SELECT
                 lr.recommendation_id,
@@ -449,7 +451,6 @@ const getFeedback = async (req, res, next) => {
             [lecturerId]
         );
 
-        // Written reviews (student names are not exposed)
         const [reviews] = await db.execute(
             `SELECT
                 rv.review_id,
@@ -501,14 +502,12 @@ const getFeedback = async (req, res, next) => {
 
 // ==========================================
 // DASHBOARD STATISTICS
-// Summary of the logged-in lecturer's own activity
 // ==========================================
 
 const getDashboard = async (req, res, next) => {
     try {
         const lecturerId = req.user.userId;
 
-        // Number of recommendations and number of different books
         const [counts] = await db.execute(
             `SELECT
                 COUNT(*) AS total_recommendations,
@@ -518,7 +517,6 @@ const getDashboard = async (req, res, next) => {
             [lecturerId]
         );
 
-        // Ratings given by students on this lecturer's recommended book + topic pairs
         const [ratings] = await db.execute(
             `SELECT
                 COUNT(r.rating_id) AS total_ratings,
@@ -534,7 +532,6 @@ const getDashboard = async (req, res, next) => {
             [lecturerId]
         );
 
-        // Five most recent recommendations
         const [recent] = await db.execute(
             `SELECT
                 lr.recommendation_id,
@@ -568,9 +565,10 @@ const getDashboard = async (req, res, next) => {
         next(error);
     }
 };
+
+
 // ==========================================
 // LIST MY NOTIFICATIONS
-// Only the logged-in lecturer's own notifications
 // ==========================================
 
 const getNotifications = async (req, res, next) => {
@@ -616,7 +614,6 @@ const getNotifications = async (req, res, next) => {
 
 // ==========================================
 // MARK ONE NOTIFICATION AS READ
-// user_id in the WHERE clause: only my own notification
 // ==========================================
 
 const markNotificationRead = async (req, res, next) => {
@@ -678,6 +675,7 @@ const markAllNotificationsRead = async (req, res, next) => {
     }
 };
 
+
 // ==========================================
 // MY PROFILE
 // ==========================================
@@ -711,7 +709,6 @@ const getProfile = async (req, res, next) => {
 
 // ==========================================
 // UPDATE MY NAME
-// Email and role cannot be changed here
 // ==========================================
 
 const updateProfile = async (req, res, next) => {
@@ -748,7 +745,6 @@ const updateProfile = async (req, res, next) => {
 
 // ==========================================
 // CHANGE MY PASSWORD
-// Current password must be verified first
 // ==========================================
 
 const changePassword = async (req, res, next) => {
@@ -812,6 +808,7 @@ const changePassword = async (req, res, next) => {
         next(error);
     }
 };
+
 
 module.exports = {
     getFilters,
