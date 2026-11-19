@@ -103,13 +103,16 @@ function NotificationPanel({
     onUnreadCountChange?.(unreadCount);
   }, [unreadCount, onUnreadCountChange]);
 
-  // Mark one lecturer notification as read.
+  // Mark one notification as read according to the user's role.
   const handleMarkAsRead = async (id) => {
-    if (role !== "lecturer") return;
-
     try {
-      await markNotificationRead(id);
+      if (role === "lecturer") {
+        await markNotificationRead(id);
+      }
 
+      // Update the individual notification in the UI.
+      // Lecturer updates only after backend confirmation.
+      // Student updates locally because no individual API exists.
       setNotifications((previousNotifications) =>
         previousNotifications.map((notification) =>
           notification.id === id
@@ -235,7 +238,7 @@ function NotificationPanel({
                 </span>
               </div>
 
-              {role === "lecturer" && notification.unread && (
+              {notification.unread && (
                 <button
                   type="button"
                   className="notification-read-button"
