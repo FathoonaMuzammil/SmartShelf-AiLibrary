@@ -1,0 +1,105 @@
+import API_BASE_URL from "./apiConfig.js";
+
+const getAuthToken = () => sessionStorage.getItem("smartshelf_token");
+
+// Common helper for all lecturer API calls
+const request = async (path, options = {}) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method || "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Something went wrong.");
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(
+        "Unable to connect to SmartShelf server. Please check whether the backend is running.",
+        { cause: error },
+      );
+    }
+
+    throw error;
+  }
+};
+
+// Subjects and topics for the recommendation form
+export const getFilters = () => request("/lecturer/filters");
+
+// Search books. filters: { search, subject_id, topic_id, availability }
+export const getBooks = (filters = {}) => {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== "" && value !== undefined && value !== null) {
+      params.append(key, value);
+    }
+  });
+
+  const query = params.toString();
+
+  return request(`/lecturer/books${query ? `?${query}` : ""}`);
+};
+
+// Create a new recommendation
+export const createRecommendation = (recommendation) =>
+  request("/lecturer/recommendations", {
+    method: "POST",
+    body: recommendation,
+  });
+
+// All recommendations created by the logged-in lecturer
+export const getMyRecommendations = () => request("/lecturer/recommendations");
+
+// Edit one of my recommendations
+export const updateRecommendation = (recommendationId, data) =>
+  request(`/lecturer/recommendations/${recommendationId}`, {
+    method: "PUT",
+    body: data,
+  });
+
+// Delete one of my recommendations
+export const deleteRecommendation = (recommendationId) =>
+  request(`/lecturer/recommendations/${recommendationId}`, {
+    method: "DELETE",
+  });
+
+// Student ratings and reviews for my recommendations
+export const getFeedback = () => request("/lecturer/feedback");
+
+// Dashboard statistics for the logged-in lecturer
+export const getDashboard = () => request("/lecturer/dashboard");
+
+// Notifications of the logged-in lecturer
+export const getNotifications = () => request("/lecturer/notifications");
+
+// Mark one notification as read
+export const markNotificationRead = (notificationId) =>
+  request(`/lecturer/notifications/${notificationId}/read`, {
+    method: "PATCH",
+  });
+
+// Mark all notifications as read
+export const markAllNotificationsRead = () =>
+  request("/lecturer/notifications/read-all", { method: "PATCH" });
+
+// Profile of the logged-in lecturer
+export const getProfile = () => request("/lecturer/profile");
+
+// Update my name
+export const updateProfile = (data) =>
+  request("/lecturer/profile", { method: "PUT", body: data });
+
+// Change my password
+export const changePassword = (data) =>
+  request("/lecturer/password", { method: "PUT", body: data });

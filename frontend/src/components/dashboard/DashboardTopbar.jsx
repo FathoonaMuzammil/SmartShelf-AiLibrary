@@ -4,6 +4,7 @@ import { Menu, Bell } from "lucide-react";
 import ProfileDropdown from "./ProfileDropdown";
 import NotificationPanel from "./NotificationPanel";
 import { getDashboard } from "../../services/studentService.js";
+import { getNotifications } from "../../services/lecturerService.js";
 
 function DashboardTopbar({
   title = "Dashboard",
@@ -13,7 +14,9 @@ function DashboardTopbar({
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const user = JSON.parse(sessionStorage.getItem("smartshelf_user") || "null");
+  const user = JSON.parse(
+    sessionStorage.getItem("smartshelf_user") || "null",
+  );
 
   const displayName = user?.full_name || "SmartShelf User";
   const displayRole = user?.role || role;
@@ -26,25 +29,35 @@ function DashboardTopbar({
     .slice(0, 2)
     .toUpperCase();
 
-  // Fetch real unread notification count for students
+  // Fetch unread notification count according to user role.
   useEffect(() => {
-    if (displayRole !== "student") return;
-
     let isMounted = true;
 
-    getDashboard()
-      .then((data) => {
-        if (isMounted) {
-          setUnreadCount(data.summary?.unread_notifications ?? 0);
+    const fetchUnreadCount = async () => {
+      try {
+        let count = 0;
+
+        if (displayRole === "lecturer") {
+          const data = await getNotifications();
+          count = data.unread_count ?? 0;
+        } else if (displayRole === "student") {
+          const data = await getDashboard();
+          count = data.summary?.unread_notifications ?? 0;
         }
-      })
-      .catch((error) => {
+
+        if (isMounted) {
+          setUnreadCount(count);
+        }
+      } catch (error) {
         console.error("Failed to fetch unread notifications:", error);
 
         if (isMounted) {
           setUnreadCount(0);
         }
-      });
+      }
+    };
+
+    fetchUnreadCount();
 
     return () => {
       isMounted = false;
@@ -80,7 +93,7 @@ function DashboardTopbar({
           >
             <Bell size={20} />
 
-            {displayRole === "student" && unreadCount > 0 && (
+            {unreadCount > 0 && (
               <span className="notification-count">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
@@ -89,6 +102,7 @@ function DashboardTopbar({
 
           {showNotifications && (
             <NotificationPanel
+              role={displayRole}
               onClose={() => setShowNotifications(false)}
               onUnreadCountChange={setUnreadCount}
             />
