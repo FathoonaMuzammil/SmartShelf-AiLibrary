@@ -149,3 +149,37 @@
   color: #1f2d22;
   text-decoration: none;
 }
+
+.borrow-notice {
+  background: #e6f4ea;
+  color: #2d6a3e;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.borrow-warning {
+  background: #fff4e0;
+  color: #8a5a00;
+  border: 1px solid #f0d49a;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.borrow-renew {
+  background: #526b55;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.borrow-renew:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

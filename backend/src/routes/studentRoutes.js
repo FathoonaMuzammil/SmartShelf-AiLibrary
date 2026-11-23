@@ -31,6 +31,10 @@ router.patch(
 
 // Borrowings (current loans and history)
 router.get('/borrowings', borrowingController.getMyBorrowings);
+router.patch(
+    '/borrowings/:borrowingId/renew',
+    borrowingController.renewBorrowing
+);
 
 // Ratings and reviews
 router.get('/books/:bookId/feedback', feedbackController.getBookFeedback);

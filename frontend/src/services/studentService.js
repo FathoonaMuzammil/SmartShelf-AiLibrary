@@ -101,3 +101,9 @@ export const getDashboard = () => request("/student/dashboard");
 // Mark all notifications as read
 export const markAllNotificationsRead = () =>
   request("/student/notifications/read-all", { method: "PATCH" });
+
+// ---------- Renewals ----------
+
+// Renew a borrowed book (once, +7 days)
+export const renewBorrowing = (borrowingId) =>
+  request(`/student/borrowings/${borrowingId}/renew`, { method: "PATCH" });

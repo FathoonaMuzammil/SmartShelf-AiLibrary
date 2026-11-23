@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const policy = require('../config/libraryPolicy');
 
 const ACTIVE_STATUSES = ['pending', 'waiting', 'ready_for_pickup'];
 
@@ -39,6 +40,28 @@ const createReservation = async (req, res, next) => {
                 success: false,
                 message: 'Book not found.'
             });
+        }
+
+        // Policy: students with overdue books cannot make new reservations
+        if (policy.BLOCK_NEW_RESERVATIONS_WHEN_OVERDUE) {
+            const [overdueLoans] = await connection.execute(
+                `SELECT borrowing_id
+                 FROM Borrowings
+                 WHERE student_id = ?
+                   AND returned_at IS NULL
+                   AND status IN ('borrowed', 'overdue')
+                   AND due_date < NOW()`,
+                [studentId]
+            );
+
+            if (overdueLoans.length > 0) {
+                await connection.rollback();
+
+                return res.status(403).json({
+                    success: false,
+                    message: 'You have overdue books. Please return them before making a new reservation.'
+                });
+            }
         }
 
         // Student must not already have an active reservation for this book
