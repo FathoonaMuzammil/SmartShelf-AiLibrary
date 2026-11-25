@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 
 const studentController = require('../controllers/studentController');
-const reservationController = require('../controllers/reservationController');
-const borrowingController = require('../controllers/borrowingController');
+const reservationController = require('../controllers/studentReservationController');
+const borrowingController = require('../controllers/studentBorrowingController');
 const feedbackController = require('../controllers/feedbackController');
 const dashboardController = require('../controllers/dashboardController');
 const authenticateToken = require('../middleware/authMiddleware');
