@@ -6,6 +6,7 @@ const authRoutes = require('./routes/authRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const lecturerRoutes = require('./routes/lecturerRoutes');
+const librarianRoutes = require('./routes/librarianRoutes');
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/lecturer', lecturerRoutes);
+app.use('/api/librarian', librarianRoutes);
 
 // Basic API health check
 app.get('/api/health', (req, res) => {

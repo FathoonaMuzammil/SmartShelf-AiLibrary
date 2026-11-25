@@ -39,7 +39,7 @@ const getBooks = async (req, res, next) => {
     try {
         const { search, subject_id, topic_id, availability } = req.query;
 
-        const conditions = [];
+        const conditions = ['b.is_archived = FALSE'];
         const params = [];
 
         // Search by title, author, ISBN or topic name
@@ -169,14 +169,15 @@ const getBookById = async (req, res, next) => {
         }
 
         const [books] = await db.execute(
-            `SELECT
-                b.book_id, b.isbn, b.title, b.authors, b.publisher,
-                b.publication_year, b.edition, b.language,
-                b.description, b.cover_image_url
-             FROM Books b
-             WHERE b.book_id = ?`,
-            [bookId]
-        );
+    `SELECT
+        b.book_id, b.isbn, b.title, b.authors, b.publisher,
+        b.publication_year, b.edition, b.language,
+        b.description, b.cover_image_url
+     FROM Books b
+     WHERE b.book_id = ?
+       AND b.is_archived = FALSE`,
+    [bookId]
+);
 
         if (books.length === 0) {
             return res.status(404).json({

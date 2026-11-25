@@ -1,0 +1,404 @@
+/* =====================================
+   LIBRARIAN DASHBOARD
+===================================== */
+
+.ld-page {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  color: #354438;
+}
+
+/* WELCOME SECTION */
+
+.ld-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  padding: 32px 36px;
+  margin-bottom: 32px;
+  background: #ffffff;
+  border: 1px solid #e3e8df;
+  border-radius: 16px;
+}
+
+.ld-welcome-content {
+  max-width: 650px;
+}
+
+.ld-eyebrow {
+  color: #829b83;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.ld-welcome h1 {
+  margin-top: 10px;
+  color: #526b55;
+  font-family: "Poppins", sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.ld-welcome p {
+  margin-top: 9px;
+  color: #788278;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.ld-welcome-icon {
+  width: 85px;
+  height: 85px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #526b55;
+  background: #e8eee5;
+  border-radius: 20px;
+}
+
+/* SECTION HEADINGS */
+
+.ld-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.ld-section-heading h2 {
+  color: #354438;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.ld-section-heading p {
+  margin-top: 5px;
+  color: #788278;
+  font-size: 13px;
+}
+
+/* REFRESH BUTTON */
+
+.ld-refresh-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  color: #526b55;
+  background: #ffffff;
+  border: 1px solid #e3e8df;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.ld-refresh-button:hover {
+  background: #e8eee5;
+  border-color: #829b83;
+}
+
+.ld-refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* STATISTICS GRID */
+
+.ld-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 35px;
+}
+
+.ld-stat-card {
+  min-width: 0;
+  padding: 23px;
+  background: #ffffff;
+  border: 1px solid #e3e8df;
+  border-radius: 14px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.ld-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 9px 24px rgba(53, 68, 56, 0.07);
+}
+
+.ld-stat-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ld-stat-title {
+  color: #788278;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ld-stat-card h3 {
+  margin-top: 10px;
+  color: #354438;
+  font-family: "Poppins", sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.ld-stat-description {
+  margin-top: 18px;
+  color: #929b91;
+  font-size: 12px;
+}
+
+.ld-stat-icon {
+  width: 47px;
+  height: 47px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+/* STAT ICON COLORS */
+
+.ld-stat-icon.green {
+  color: #526b55;
+  background: #e8eee5;
+}
+
+.ld-stat-icon.blue {
+  color: #50748b;
+  background: #eaf1f5;
+}
+
+.ld-stat-icon.teal {
+  color: #438477;
+  background: #e7f3ef;
+}
+
+.ld-stat-icon.purple {
+  color: #76628f;
+  background: #f0ebf6;
+}
+
+.ld-stat-icon.red {
+  color: #b65d54;
+  background: #faecea;
+}
+
+.ld-stat-icon.gold {
+  color: #9b8047;
+  background: #f7f1e3;
+}
+
+/* QUICK ACTIONS */
+
+.ld-actions-section {
+  margin-top: 8px;
+}
+
+.ld-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.ld-action-card {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #e3e8df;
+  border-radius: 13px;
+  transition: 0.2s ease;
+}
+
+.ld-action-card:hover {
+  background: #f9fbf8;
+  border-color: #829b83;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(53, 68, 56, 0.06);
+}
+
+.ld-action-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #526b55;
+  background: #e8eee5;
+  border-radius: 11px;
+}
+
+.ld-action-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ld-action-content h3 {
+  color: #354438;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ld-action-content p {
+  margin-top: 6px;
+  color: #788278;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ld-action-arrow {
+  flex-shrink: 0;
+  color: #829b83;
+  transition: transform 0.2s ease;
+}
+
+.ld-action-card:hover .ld-action-arrow {
+  transform: translate(3px, -3px);
+}
+
+/* LOADING STATE */
+
+.ld-state-card {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  color: #526b55;
+  background: #ffffff;
+  border: 1px solid #e3e8df;
+  border-radius: 14px;
+}
+
+.ld-state-card p {
+  color: #788278;
+  font-size: 14px;
+}
+
+/* ERROR STATE */
+
+.ld-error-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 22px;
+  color: #b65d54;
+  background: #fff7f6;
+  border: 1px solid #f1d5d1;
+  border-radius: 12px;
+}
+
+.ld-error-card h3 {
+  font-size: 15px;
+}
+
+.ld-error-card p {
+  margin-top: 6px;
+  color: #85635f;
+  font-size: 13px;
+}
+
+.ld-error-card button {
+  margin-top: 12px;
+  padding: 8px 14px;
+  color: #ffffff;
+  background: #526b55;
+  border: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* LOADING ANIMATION */
+
+.ld-spinning {
+  animation: ld-spin 1s linear infinite;
+}
+
+@keyframes ld-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =====================================
+   RESPONSIVE DESIGN
+===================================== */
+
+@media (max-width: 1100px) {
+  .ld-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ld-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .ld-welcome {
+    padding: 23px;
+  }
+
+  .ld-welcome h1 {
+    font-size: 24px;
+  }
+
+  .ld-welcome-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 14px;
+  }
+
+  .ld-welcome-icon svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .ld-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+
+  .ld-stat-card {
+    padding: 19px;
+  }
+
+  .ld-section-heading h2 {
+    font-size: 18px;
+  }
+
+  .ld-action-card {
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ld-page *,
+  .ld-page *::before,
+  .ld-page *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

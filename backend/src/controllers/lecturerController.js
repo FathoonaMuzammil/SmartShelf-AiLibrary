@@ -124,8 +124,9 @@ const getBooks = async (req, res, next) => {
                 COALESCE(SUM(c.status = 'available'), 0) AS available_copies,
                 GROUP_CONCAT(DISTINCT c.shelf_location SEPARATOR ', ') AS shelf_locations
              FROM Books b
-             LEFT JOIN BookCopies c ON c.book_id = b.book_id
-             ${whereClause}
+            LEFT JOIN BookCopies c ON c.book_id = b.book_id
+            WHERE b.is_archived = FALSE
+            ${whereClause ? `AND (${whereClause.replace(/^WHERE\s+/i, '')})` : ''}
              GROUP BY b.book_id
              ${havingClause}
              ORDER BY b.title`,
@@ -191,7 +192,7 @@ const createRecommendation = async (req, res, next) => {
         }
 
         const [books] = await db.execute(
-            'SELECT book_id FROM Books WHERE book_id = ?',
+            'SELECT book_id FROM Books WHERE book_id = ? AND is_archived = FALSE',
             [bookId]
         );
 
@@ -278,6 +279,7 @@ const getMyRecommendations = async (req, res, next) => {
              JOIN Topics t ON t.topic_id = lr.topic_id
              JOIN Subjects s ON s.subject_id = t.subject_id
              WHERE lr.lecturer_id = ?
+                AND b.is_archived = FALSE
              ORDER BY lr.created_at DESC`,
             [lecturerId]
         );
@@ -445,6 +447,7 @@ const getFeedback = async (req, res, next) => {
              LEFT JOIN BookRatings r
                 ON r.book_id = lr.book_id AND r.topic_id = lr.topic_id
              WHERE lr.lecturer_id = ?
+                 AND b.is_archived = FALSE
              GROUP BY lr.recommendation_id, lr.book_id, b.title, b.authors,
                       lr.topic_id, t.topic_name, s.subject_name, lr.created_at
              ORDER BY lr.created_at DESC`,
@@ -543,6 +546,7 @@ const getDashboard = async (req, res, next) => {
              JOIN Books b ON b.book_id = lr.book_id
              JOIN Topics t ON t.topic_id = lr.topic_id
              WHERE lr.lecturer_id = ?
+                AND b.is_archived = FALSE
              ORDER BY lr.created_at DESC
              LIMIT 5`,
             [lecturerId]
