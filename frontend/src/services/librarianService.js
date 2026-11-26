@@ -144,9 +144,10 @@ export const issueBorrowing = (borrowingData) =>
 // RETURNS MANAGEMENT API FUNCTIONS
 // ==========================================
 
-export const returnBorrowing = (borrowingId) =>
+export const returnBorrowing = (borrowingId, returnData) =>
   request(`/librarian/borrowings/${borrowingId}/return`, {
     method: "PATCH",
+    body: returnData,
   });
 
 // ==========================================

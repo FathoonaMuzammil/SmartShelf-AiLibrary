@@ -90,7 +90,9 @@ const LibrarianBorrowingsPage = () => {
   const [copyId, setCopyId] = useState("");
 
   // Return confirmation
-  const [selectedBorrowing, setSelectedBorrowing] = useState(null);
+const [selectedBorrowing, setSelectedBorrowing] = useState(null);
+const [returnCondition, setReturnCondition] = useState("normal");
+const [returnNotes, setReturnNotes] = useState("");
 
   // Load borrowing records
   const fetchBorrowings = useCallback(async () => {
@@ -205,28 +207,45 @@ const LibrarianBorrowingsPage = () => {
 
   // Confirm book return
   const handleReturn = async () => {
-    if (!selectedBorrowing) return;
+  if (!selectedBorrowing) return;
 
-    const borrowing = selectedBorrowing;
+  const borrowing = selectedBorrowing;
 
-    try {
-      setReturnLoadingId(borrowing.borrowing_id);
-      setError("");
-      setNotice("");
+  // Notes are required for damaged or lost books
+  if (
+    ["damaged", "lost"].includes(returnCondition) &&
+    !returnNotes.trim()
+  ) {
+    setError("Please provide notes for damaged or lost books.");
+    return;
+  }
 
-      const response = await returnBorrowing(borrowing.borrowing_id);
+  try {
+    setReturnLoadingId(borrowing.borrowing_id);
+    setError("");
+    setNotice("");
 
-      setNotice(response.message || "Book return recorded successfully.");
+    const response = await returnBorrowing(
+      borrowing.borrowing_id,
+      {
+        condition: returnCondition,
+        notes: returnNotes.trim(),
+      }
+    );
 
-      setSelectedBorrowing(null);
+    setNotice(response.message || "Borrowing record updated successfully.");
 
-      await fetchBorrowings();
-    } catch (err) {
-      setError(err.message || "Unable to record the book return.");
-    } finally {
-      setReturnLoadingId(null);
-    }
-  };
+    setSelectedBorrowing(null);
+    setReturnCondition("normal");
+    setReturnNotes("");
+
+    await fetchBorrowings();
+  } catch (err) {
+    setError(err.message || "Unable to process the borrowing record.");
+  } finally {
+    setReturnLoadingId(null);
+  }
+};
 
   const summaryCards = [
     {
@@ -722,98 +741,174 @@ const LibrarianBorrowingsPage = () => {
         </section>
 
         {/* Return Confirmation Modal */}
-        {selectedBorrowing && (
-          <div
-            className="lbr-modal-overlay"
-            onClick={() => setSelectedBorrowing(null)}
-          >
-            <div
-              className="lbr-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="lbr-modal-icon">
-                <PackageCheck size={27} />
-              </div>
+{selectedBorrowing && (
+  <div
+    className="lbr-modal-overlay"
+    onClick={() => {
+      setSelectedBorrowing(null);
+      setReturnCondition("normal");
+      setReturnNotes("");
+    }}
+  >
+    <div
+      className="lbr-modal"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="lbr-modal-icon">
+        <PackageCheck size={27} />
+      </div>
 
-              <button
-                type="button"
-                className="lbr-modal-close"
-                onClick={() => setSelectedBorrowing(null)}
-              >
-                <X size={19} />
-              </button>
+      <button
+        type="button"
+        className="lbr-modal-close"
+        onClick={() => {
+          setSelectedBorrowing(null);
+          setReturnCondition("normal");
+          setReturnNotes("");
+        }}
+      >
+        <X size={19} />
+      </button>
 
-              <h2>Confirm Book Return</h2>
+      <h2>
+        {returnCondition === "normal"
+          ? "Confirm Book Return"
+          : returnCondition === "damaged"
+          ? "Record Damaged Book"
+          : "Mark Book as Lost"}
+      </h2>
 
-              <p>
-                Are you sure you want to record the return of this book?
-              </p>
+      <p>
+        Select the condition of the book before completing this transaction.
+      </p>
 
-              <div className="lbr-return-details">
-                <div>
-                  <span>Book</span>
-                  <strong>
-                    {selectedBorrowing.title || "Unknown book"}
-                  </strong>
-                </div>
+      <div className="lbr-return-details">
+        <div>
+          <span>Book</span>
+          <strong>
+            {selectedBorrowing.title || "Unknown book"}
+          </strong>
+        </div>
 
-                <div>
-                  <span>Student</span>
-                  <strong>
-                    {selectedBorrowing.student_name ||
-                      `Student #${selectedBorrowing.student_id}`}
-                  </strong>
-                </div>
+        <div>
+          <span>Student</span>
+          <strong>
+            {selectedBorrowing.student_name ||
+              `Student #${selectedBorrowing.student_id}`}
+          </strong>
+        </div>
 
-                <div>
-                  <span>Borrowing ID</span>
-                  <strong>
-                    #{selectedBorrowing.borrowing_id}
-                  </strong>
-                </div>
-              </div>
+        <div>
+          <span>Borrowing ID</span>
+          <strong>
+            #{selectedBorrowing.borrowing_id}
+          </strong>
+        </div>
+      </div>
 
-              <div className="lbr-modal-info">
-                <AlertTriangle size={17} />
+      {/* Return Condition */}
+      <div className="lbr-field">
+        <label htmlFor="returnCondition">
+          Return Condition <span>*</span>
+        </label>
 
-                <span>
-                  If another student is waiting for this book,
-                  the copy may be allocated to that student automatically.
-                </span>
-              </div>
+        <select
+          id="returnCondition"
+          value={returnCondition}
+          onChange={(e) => {
+            setReturnCondition(e.target.value);
+            setReturnNotes("");
+            setError("");
+          }}
+          disabled={returnLoadingId !== null}
+        >
+          <option value="normal">Normal - Good Condition</option>
+          <option value="damaged">Damaged</option>
+          <option value="lost">Lost - Not Returned</option>
+        </select>
+      </div>
 
-              <div className="lbr-modal-actions">
-                <button
-                  type="button"
-                  className="lbr-button lbr-button-outline"
-                  onClick={() => setSelectedBorrowing(null)}
-                  disabled={returnLoadingId !== null}
-                >
-                  Cancel
-                </button>
+      {/* Incident Notes */}
+      {["damaged", "lost"].includes(returnCondition) && (
+        <div className="lbr-field">
+          <label htmlFor="returnNotes">
+            Incident Notes <span>*</span>
+          </label>
 
-                <button
-                  type="button"
-                  className="lbr-button lbr-button-primary"
-                  onClick={handleReturn}
-                  disabled={returnLoadingId !== null}
-                >
-                  {returnLoadingId !== null ? (
-                    <>
-                      <RefreshCw size={16} className="lbr-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={17} />
-                      Confirm Return
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+          <textarea
+            id="returnNotes"
+            value={returnNotes}
+            onChange={(e) => setReturnNotes(e.target.value)}
+            placeholder={
+              returnCondition === "damaged"
+                ? "Describe the damage to the book..."
+                : "Explain the circumstances of the lost book..."
+            }
+            rows={3}
+            maxLength={1000}
+            disabled={returnLoadingId !== null}
+          />
+
+          <small>
+            Notes are required for damaged or lost books.
+          </small>
+        </div>
+      )}
+
+      {/* Information Message */}
+      <div className="lbr-modal-info">
+        <AlertTriangle size={17} />
+
+        <span>
+          {returnCondition === "normal"
+            ? "If another student is waiting for this book, the copy may be allocated automatically."
+            : returnCondition === "damaged"
+            ? "This copy will be marked as damaged and will not be available for borrowing."
+            : "This borrowing will be marked as lost, and the copy will not be available for borrowing."}
+        </span>
+      </div>
+
+      {/* Modal Actions */}
+      <div className="lbr-modal-actions">
+        <button
+          type="button"
+          className="lbr-button lbr-button-outline"
+          onClick={() => {
+            setSelectedBorrowing(null);
+            setReturnCondition("normal");
+            setReturnNotes("");
+          }}
+          disabled={returnLoadingId !== null}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          className="lbr-button lbr-button-primary"
+          onClick={handleReturn}
+          disabled={returnLoadingId !== null}
+        >
+          {returnLoadingId !== null ? (
+            <>
+              <RefreshCw size={16} className="lbr-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <CheckCircle2 size={17} />
+              {returnCondition === "normal"
+                ? "Confirm Return"
+                : returnCondition === "damaged"
+                ? "Mark as Damaged"
+                : "Mark as Lost"}
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </DashboardLayout>
   );

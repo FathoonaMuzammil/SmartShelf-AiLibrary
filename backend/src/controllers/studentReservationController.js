@@ -143,8 +143,30 @@ const createReservation = async (req, res, next) => {
 
         const studentId = req.user.userId;
 
-        connection = await db.getConnection();
-        await connection.beginTransaction();
+connection = await db.getConnection();
+await connection.beginTransaction();
+
+// Verify that the student account is active.
+const [students] = await connection.execute(
+    `SELECT user_id, role, is_active
+     FROM Users
+     WHERE user_id = ?
+     FOR UPDATE`,
+    [studentId]
+);
+
+if (
+    students.length === 0 ||
+    students[0].role !== 'student' ||
+    !students[0].is_active
+) {
+    await connection.rollback();
+
+    return res.status(403).json({
+        success: false,
+        message: 'Your account is not eligible to make reservations.'
+    });
+}
 
         const [books] = await connection.execute(
             `SELECT book_id, title, is_archived

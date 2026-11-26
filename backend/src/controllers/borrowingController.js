@@ -78,7 +78,7 @@ const getMyBorrowings = async (req, res, next) => {
         const summary = {
             current: borrowings.filter((item) => item.is_active).length,
             overdue: borrowings.filter((item) => item.is_overdue).length,
-            returned: borrowings.filter((item) => !item.is_active).length
+            returned: borrowings.filter((item) => item.status === 'returned').length
         };
 
         return res.status(200).json({
@@ -670,10 +670,35 @@ const returnBorrowing = async (req, res, next) => {
             });
         }
 
+        // 1. Validate return condition and incident notes.
+        const condition = req.body?.condition || 'normal';
+        const notes = req.body?.notes?.trim() || '';
+
+        if (!['normal', 'damaged', 'lost'].includes(condition)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid book condition.'
+            });
+        }
+
+        if (condition !== 'normal' && !notes) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide notes for damaged or lost books.'
+            });
+        }
+
+        if (notes.length > 1000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Incident notes cannot exceed 1000 characters.'
+            });
+        }
+
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        // 1. Lock the borrowing record and its physical copy.
+        // 2. Lock borrowing record and physical copy.
         const [borrowings] = await connection.execute(
             `SELECT
                 br.borrowing_id,
@@ -703,7 +728,7 @@ const returnBorrowing = async (req, res, next) => {
 
         const borrowing = borrowings[0];
 
-        // 2. Only active borrowed or overdue records can be returned.
+        // 3. Only active borrowing records can be processed.
         if (
             borrowing.returned_at ||
             !['borrowed', 'overdue'].includes(borrowing.status)
@@ -712,122 +737,149 @@ const returnBorrowing = async (req, res, next) => {
 
             return res.status(400).json({
                 success: false,
-                message: 'This borrowing record cannot be returned.'
+                message: 'This borrowing record cannot be processed.'
             });
         }
 
-        // 3. Make sure the physical copy is currently borrowed.
+        // 4. Make sure the physical copy is currently borrowed.
         if (borrowing.copy_status !== 'borrowed') {
             await connection.rollback();
 
             return res.status(409).json({
                 success: false,
-                message: 'The physical copy is not currently marked as borrowed. Please check its status.'
+                message: 'The physical copy is not currently marked as borrowed.'
             });
         }
 
-        // 4. Find the earliest eligible student on the waiting list.
-        const [waitingReservations] = await connection.execute(
-            `SELECT
-                r.reservation_id,
-                r.student_id
-             FROM Reservations r
-             JOIN Users u ON u.user_id = r.student_id
-             WHERE r.book_id = ?
-               AND r.status = 'waiting'
-               AND u.role = 'student'
-               AND u.is_active = 1
-
-               AND NOT EXISTS (
-                   SELECT 1
-                   FROM Borrowings existing
-                   JOIN BookCopies existingCopy
-                     ON existingCopy.copy_id = existing.copy_id
-                   WHERE existing.student_id = r.student_id
-                     AND existingCopy.book_id = r.book_id
-                     AND existing.status IN ('borrowed', 'overdue')
-                     AND existing.returned_at IS NULL
-               )
-
-               AND (
-                   ? = 0
-                   OR NOT EXISTS (
-                       SELECT 1
-                       FROM Borrowings overdueLoan
-                       WHERE overdueLoan.student_id = r.student_id
-                         AND overdueLoan.status IN ('borrowed', 'overdue')
-                         AND overdueLoan.returned_at IS NULL
-                         AND overdueLoan.due_date < NOW()
-                   )
-               )
-
-             ORDER BY r.reserved_at ASC, r.reservation_id ASC
-             LIMIT 1
-             FOR UPDATE`,
-            [
-                borrowing.book_id,
-                policy.BLOCK_NEW_RESERVATIONS_WHEN_OVERDUE ? 1 : 0
-            ]
-        );
-
-        const nextReservation = waitingReservations[0] || null;
-
-        // 5. Record the return.
-        await connection.execute(
-            `UPDATE Borrowings
-             SET status = 'returned',
-                 returned_at = NOW(),
-                 returned_by = ?
-             WHERE borrowing_id = ?`,
-            [req.user.userId, borrowingId]
-        );
-
-        let copyStatus = 'available';
-        let nextReservationId = null;
-
-        if (nextReservation) {
-            // 6A. Assign the returned copy to the next waiting student.
-            copyStatus = 'reserved';
-            nextReservationId = nextReservation.reservation_id;
-
+        // 5. Record the borrowing outcome.
+        if (condition === 'lost') {
             await connection.execute(
-                `UPDATE Reservations
-                 SET copy_id = ?,
-                     status = 'ready_for_pickup',
-                     ready_at = NOW(),
-                     pickup_deadline = DATE_ADD(
-                         NOW(),
-                         INTERVAL ? DAY
-                     )
-                 WHERE reservation_id = ?
-                   AND status = 'waiting'`,
-                [
-                    borrowing.copy_id,
-                    policy.PICKUP_DEADLINE_DAYS,
-                    nextReservationId
-                ]
-            );
-
-            // Notify the next student.
-            await connection.execute(
-                `INSERT INTO Notifications
-                    (user_id, notification_type, title, message,
-                     related_type, related_id)
-                 VALUES (?, 'reservation', ?, ?, 'reservation', ?)`,
-                [
-                    nextReservation.student_id,
-                    'Book ready for pickup',
-                    `"${borrowing.title}" is now ready for collection. Please collect it within ${policy.PICKUP_DEADLINE_DAYS} days.`,
-                    nextReservationId
-                ]
+                `UPDATE Borrowings
+                 SET status = 'lost',
+                     incident_notes = ?,
+                     incident_recorded_by = ?
+                 WHERE borrowing_id = ?`,
+                [notes, req.user.userId, borrowingId]
             );
 
         } else {
-            // 6B. Nobody is waiting. Make the copy available.
-            copyStatus = 'available';
+            await connection.execute(
+                `UPDATE Borrowings
+                 SET status = 'returned',
+                     returned_at = NOW(),
+                     returned_by = ?,
+                     incident_notes = ?,
+                     incident_recorded_by = ?
+                 WHERE borrowing_id = ?`,
+                [
+                    req.user.userId,
+                    condition === 'damaged' ? notes : null,
+                    condition === 'damaged' ? req.user.userId : null,
+                    borrowingId
+                ]
+            );
         }
 
-        // 7. Update the physical copy's status.
+        let copyStatus = condition === 'normal'
+            ? 'available'
+            : condition;
+
+        let nextReservationId = null;
+        let nextReservation = null;
+
+        // 6. Only normal returns can be allocated to waiting students.
+        if (condition === 'normal') {
+
+            const [waitingReservations] = await connection.execute(
+                `SELECT
+                    r.reservation_id,
+                    r.student_id
+                 FROM Reservations r
+                 JOIN Users u ON u.user_id = r.student_id
+                 WHERE r.book_id = ?
+                        AND r.status = 'waiting'
+                        AND u.role = 'student'
+                        AND EXISTS (
+                            SELECT 1
+                            FROM Books b
+                            WHERE b.book_id = r.book_id
+                                AND b.is_archived = 0
+                        )
+                   AND u.is_active = 1
+
+                   AND NOT EXISTS (
+                       SELECT 1
+                       FROM Borrowings existing
+                       JOIN BookCopies existingCopy
+                         ON existingCopy.copy_id = existing.copy_id
+                       WHERE existing.student_id = r.student_id
+                         AND existingCopy.book_id = r.book_id
+                         AND existing.status IN ('borrowed', 'overdue')
+                         AND existing.returned_at IS NULL
+                   )
+
+                   AND (
+                       ? = 0
+                       OR NOT EXISTS (
+                           SELECT 1
+                           FROM Borrowings overdueLoan
+                           WHERE overdueLoan.student_id = r.student_id
+                             AND overdueLoan.status IN ('borrowed', 'overdue')
+                             AND overdueLoan.returned_at IS NULL
+                             AND overdueLoan.due_date < NOW()
+                       )
+                   )
+
+                 ORDER BY r.reserved_at ASC, r.reservation_id ASC
+                 LIMIT 1
+                 FOR UPDATE`,
+                [
+                    borrowing.book_id,
+                    policy.BLOCK_NEW_RESERVATIONS_WHEN_OVERDUE ? 1 : 0
+                ]
+            );
+
+            nextReservation = waitingReservations[0] || null;
+
+            if (nextReservation) {
+                copyStatus = 'reserved';
+                nextReservationId = nextReservation.reservation_id;
+
+                await connection.execute(
+                    `UPDATE Reservations
+                     SET copy_id = ?,
+                         status = 'ready_for_pickup',
+                         ready_at = NOW(),
+                         pickup_deadline = DATE_ADD(
+                             NOW(),
+                             INTERVAL ? DAY
+                         )
+                     WHERE reservation_id = ?
+                       AND status = 'waiting'`,
+                    [
+                        borrowing.copy_id,
+                        policy.PICKUP_DEADLINE_DAYS,
+                        nextReservationId
+                    ]
+                );
+
+                // Notify the next waiting student.
+                await connection.execute(
+                    `INSERT INTO Notifications
+                        (user_id, notification_type, title, message,
+                         related_type, related_id)
+                     VALUES (?, 'reservation', ?, ?, 'reservation', ?)`,
+                    [
+                        nextReservation.student_id,
+                        'Book ready for pickup',
+                        `"${borrowing.title}" is now ready for collection. Please collect it within ${policy.PICKUP_DEADLINE_DAYS} days.`,
+                        nextReservationId
+                    ]
+                );
+            }
+        }
+
+        // 7. Update physical copy status.
         await connection.execute(
             `UPDATE BookCopies
              SET status = ?
@@ -835,32 +887,48 @@ const returnBorrowing = async (req, res, next) => {
             [copyStatus, borrowing.copy_id]
         );
 
-        // 8. Notify the student who returned the book.
-        await connection.execute(
-            `INSERT INTO Notifications
-                (user_id, notification_type, title, message,
-                 related_type, related_id)
-             VALUES (?, 'return', ?, ?, 'borrowing', ?)`,
-            [
-                borrowing.student_id,
-                'Book returned successfully',
-                `"${borrowing.title}" has been successfully returned to the library.`,
-                borrowingId
-            ]
-        );
+        // 8. Notify the original student.
+        if (condition === 'normal' || condition === 'damaged') {
+            await connection.execute(
+                `INSERT INTO Notifications
+                    (user_id, notification_type, title, message,
+                     related_type, related_id)
+                 VALUES (?, 'return', ?, ?, 'borrowing', ?)`,
+                [
+                    borrowing.student_id,
+                    condition === 'damaged'
+                        ? 'Damaged book recorded'
+                        : 'Book returned successfully',
+                    condition === 'damaged'
+                        ? `"${borrowing.title}" has been returned and recorded as damaged.`
+                        : `"${borrowing.title}" has been successfully returned to the library.`,
+                    borrowingId
+                ]
+            );
+        }
 
         // 9. Commit all changes together.
         await connection.commit();
 
+        let message;
+
+        if (condition === 'lost') {
+            message = 'Book recorded as lost. The copy is unavailable for borrowing.';
+        } else if (condition === 'damaged') {
+            message = 'Book returned and recorded as damaged. The copy is unavailable for borrowing.';
+        } else if (nextReservation) {
+            message = 'Book returned successfully. The next waiting student has been notified.';
+        } else {
+            message = 'Book returned successfully. The copy is now available.';
+        }
+
         return res.status(200).json({
             success: true,
-            message: nextReservation
-                ? 'Book returned successfully. The next waiting student has been notified.'
-                : 'Book returned successfully. The copy is now available.',
+            message,
             borrowing: {
                 borrowing_id: borrowingId,
-                returned_at: new Date(),
-                status: 'returned'
+                returned_at: condition === 'lost' ? null : new Date(),
+                status: condition === 'lost' ? 'lost' : 'returned'
             },
             copy: {
                 copy_id: borrowing.copy_id,
@@ -882,7 +950,6 @@ const returnBorrowing = async (req, res, next) => {
         }
     }
 };
-
 
 // ==========================================
 // EXPORT CONTROLLER FUNCTIONS
