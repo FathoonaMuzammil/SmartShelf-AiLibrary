@@ -16,6 +16,18 @@ const allocateCopyToNextWaitingStudent = async (
     copyId,
     bookTitle
 ) => {
+    // Do not allocate copies belonging to archived books.
+    const [books] = await connection.execute(
+        `SELECT is_archived
+         FROM Books
+         WHERE book_id = ?
+         FOR UPDATE`,
+        [bookId]
+    );
+
+    if (books.length === 0 || books[0].is_archived) {
+        return null;
+    }
 
     // Find the earliest eligible student.
     // These eligibility rules match returnBorrowing.
