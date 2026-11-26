@@ -79,7 +79,7 @@ const getMyBorrowings = async (req, res, next) => {
         const summary = {
             current: borrowings.filter((item) => item.is_active).length,
             overdue: borrowings.filter((item) => item.is_overdue).length,
-            returned: borrowings.filter((item) => !item.is_active).length
+            returned: borrowings.filter((item) => item.status === 'returned').length
         };
 
         return res.status(200).json({
