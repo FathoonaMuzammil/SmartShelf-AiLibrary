@@ -3,7 +3,6 @@ const ai = require('../config/gemini');
 
 // Search the real SmartShelf book catalogue
 const searchBooks = async (searchTerm) => {
-
     const keyword = `%${searchTerm}%`;
 
     const [books] = await db.execute(
@@ -33,10 +32,13 @@ const searchBooks = async (searchTerm) => {
         LEFT JOIN BookCopies bc
             ON b.book_id = bc.book_id
         WHERE
-            b.title LIKE ?
-            OR b.authors LIKE ?
-            OR b.description LIKE ?
-            OR b.publisher LIKE ?
+            b.is_archived = FALSE
+            AND (
+                b.title LIKE ?
+                OR b.authors LIKE ?
+                OR b.description LIKE ?
+                OR b.publisher LIKE ?
+            )
         GROUP BY b.book_id
         ORDER BY b.title ASC
         LIMIT 10`,

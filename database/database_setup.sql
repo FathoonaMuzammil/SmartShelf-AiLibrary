@@ -53,6 +53,9 @@ CREATE TABLE Books (
     description TEXT,
     cover_image_url VARCHAR(500),
 
+    -- Book archiving
+    is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     updated_at DATETIME NOT NULL

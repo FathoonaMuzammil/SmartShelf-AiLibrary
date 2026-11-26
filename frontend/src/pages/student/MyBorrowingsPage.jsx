@@ -6,7 +6,10 @@ import DashboardLayout from "../../components/dashboard/DashboardLayout";
 import EmptyState from "../../components/common/EmptyState";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
-import { getMyBorrowings } from "../../services/studentService";
+import {
+  getMyBorrowings,
+  renewBorrowing,
+} from "../../services/studentService";
 
 import "./MyBorrowingsPage.css";
 
@@ -58,7 +61,10 @@ function MyBorrowingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const [renewingId, setRenewingId] = useState(null);
+  const [notice, setNotice] = useState("");
+
+  const loadBorrowings = () => {
     getMyBorrowings()
       .then((data) => {
         setBorrowings(data.borrowings);
@@ -66,7 +72,27 @@ function MyBorrowingsPage() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadBorrowings();
   }, []);
+
+  const handleRenew = async (borrowingId) => {
+    setRenewingId(borrowingId);
+    setError("");
+    setNotice("");
+
+    try {
+      const data = await renewBorrowing(borrowingId);
+      setNotice(data.message);
+      loadBorrowings();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setRenewingId(null);
+    }
+  };
 
   const current = borrowings.filter((item) => item.is_active);
   const history = borrowings.filter((item) => !item.is_active);
@@ -83,6 +109,14 @@ function MyBorrowingsPage() {
       </section>
 
       {error && <p className="borrow-error">{error}</p>}
+      {notice && <p className="borrow-notice">{notice}</p>}
+
+      {summary.overdue > 0 && (
+        <p className="borrow-warning">
+          You have overdue books. Please return them to the library. Until
+          then you cannot make new reservations.
+        </p>
+      )}
 
       {loading ? (
         <LoadingSpinner message="Loading borrowings..." />
@@ -152,6 +186,25 @@ function MyBorrowingsPage() {
                       <span className="borrow-muted">
                         Due {formatDate(item.due_date)}
                       </span>
+
+                      {item.can_renew ? (
+                        <button
+                          type="button"
+                          className="borrow-renew"
+                          onClick={() => handleRenew(item.borrowing_id)}
+                          disabled={renewingId === item.borrowing_id}
+                        >
+                          {renewingId === item.borrowing_id
+                            ? "Renewing..."
+                            : "Renew"}
+                        </button>
+                      ) : (
+                        item.renew_message && (
+                          <span className="borrow-muted">
+                            {item.renew_message}
+                          </span>
+                        )
+                      )}
                     </div>
                   </article>
                 );

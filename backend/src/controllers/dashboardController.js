@@ -72,7 +72,8 @@ const getDashboard = async (req, res, next) => {
              JOIN Books b ON b.book_id = lr.book_id
              JOIN Topics t ON t.topic_id = lr.topic_id
              JOIN Users u ON u.user_id = lr.lecturer_id
-             ORDER BY lr.created_at DESC, lr.recommendation_id DESC
+             WHERE b.is_archived = FALSE
+                ORDER BY lr.created_at DESC, lr.recommendation_id DESC
              LIMIT 4`
         );
 

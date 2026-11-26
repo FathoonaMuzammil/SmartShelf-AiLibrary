@@ -1,6 +1,136 @@
 const db = require('../config/db');
+const policy = require('../config/libraryPolicy');
 
 const ACTIVE_STATUSES = ['pending', 'waiting', 'ready_for_pickup'];
+
+
+// ==========================================
+// REUSABLE FIFO ALLOCATION HELPER
+// Assigns a released copy to the next eligible
+// student in the waiting list.
+// ==========================================
+
+const allocateCopyToNextWaitingStudent = async (
+    connection,
+    bookId,
+    copyId,
+    bookTitle
+) => {
+
+    // Do not allocate copies belonging to archived books.
+    const [books] = await connection.execute(
+        `SELECT is_archived
+         FROM Books
+         WHERE book_id = ?
+         FOR UPDATE`,
+        [bookId]
+    );
+
+    if (books.length === 0 || books[0].is_archived) {
+        return null;
+    }
+
+    // Find the earliest eligible student.
+    const [waitingReservations] = await connection.execute(
+        `SELECT
+            r.reservation_id,
+            r.student_id
+         FROM Reservations r
+         JOIN Users u ON u.user_id = r.student_id
+         WHERE r.book_id = ?
+           AND r.status = 'waiting'
+           AND u.role = 'student'
+           AND u.is_active = 1
+
+           AND NOT EXISTS (
+               SELECT 1
+               FROM Borrowings existing
+               JOIN BookCopies existingCopy
+                 ON existingCopy.copy_id = existing.copy_id
+               WHERE existing.student_id = r.student_id
+                 AND existingCopy.book_id = r.book_id
+                 AND existing.status IN ('borrowed', 'overdue')
+                 AND existing.returned_at IS NULL
+           )
+
+           AND (
+               ? = 0
+               OR NOT EXISTS (
+                   SELECT 1
+                   FROM Borrowings overdueLoan
+                   WHERE overdueLoan.student_id = r.student_id
+                     AND overdueLoan.status IN ('borrowed', 'overdue')
+                     AND overdueLoan.returned_at IS NULL
+                     AND overdueLoan.due_date < NOW()
+               )
+           )
+
+         ORDER BY r.reserved_at ASC, r.reservation_id ASC
+         LIMIT 1
+         FOR UPDATE`,
+        [
+            bookId,
+            policy.BLOCK_NEW_RESERVATIONS_WHEN_OVERDUE ? 1 : 0
+        ]
+    );
+
+    const nextReservation = waitingReservations[0] || null;
+
+    // Nobody eligible is waiting.
+    if (!nextReservation) {
+        return null;
+    }
+
+    // Assign the released physical copy.
+    const [updateResult] = await connection.execute(
+        `UPDATE Reservations
+         SET copy_id = ?,
+             status = 'ready_for_pickup',
+             ready_at = NOW(),
+             pickup_deadline = DATE_ADD(
+                 NOW(),
+                 INTERVAL ? DAY
+             )
+         WHERE reservation_id = ?
+           AND status = 'waiting'`,
+        [
+            copyId,
+            policy.PICKUP_DEADLINE_DAYS,
+            nextReservation.reservation_id
+        ]
+    );
+
+    if (updateResult.affectedRows !== 1) {
+        return null;
+    }
+
+    // Mark the physical copy as reserved.
+    await connection.execute(
+        `UPDATE BookCopies
+         SET status = 'reserved'
+         WHERE copy_id = ?`,
+        [copyId]
+    );
+
+    // Notify the next student.
+    await connection.execute(
+        `INSERT INTO Notifications
+            (user_id, notification_type, title, message,
+             related_type, related_id)
+         VALUES (?, 'reservation', ?, ?, 'reservation', ?)`,
+        [
+            nextReservation.student_id,
+            'Book ready for pickup',
+            `"${bookTitle}" is now ready for collection. Please collect it within ${policy.PICKUP_DEADLINE_DAYS} days.`,
+            nextReservation.reservation_id
+        ]
+    );
+
+    return {
+        reservation_id: nextReservation.reservation_id,
+        student_id: nextReservation.student_id
+    };
+};
 
 // ==========================================
 // RESERVE A BOOK
@@ -26,9 +156,11 @@ const createReservation = async (req, res, next) => {
         connection = await db.getConnection();
         await connection.beginTransaction();
 
-        // Lock the book row so two students cannot take the last copy together
         const [books] = await connection.execute(
-            'SELECT book_id, title FROM Books WHERE book_id = ? FOR UPDATE',
+            `SELECT book_id, title, is_archived
+             FROM Books
+             WHERE book_id = ?
+             FOR UPDATE`,
             [bookId]
         );
 
@@ -41,7 +173,36 @@ const createReservation = async (req, res, next) => {
             });
         }
 
-        // Student must not already have an active reservation for this book
+        if (books[0].is_archived) {
+            await connection.rollback();
+
+            return res.status(409).json({
+                success: false,
+                message: 'This book is currently unavailable for reservation.'
+            });
+        }
+
+        if (policy.BLOCK_NEW_RESERVATIONS_WHEN_OVERDUE) {
+            const [overdueLoans] = await connection.execute(
+                `SELECT borrowing_id
+                 FROM Borrowings
+                 WHERE student_id = ?
+                   AND returned_at IS NULL
+                   AND status IN ('borrowed', 'overdue')
+                   AND due_date < NOW()`,
+                [studentId]
+            );
+
+            if (overdueLoans.length > 0) {
+                await connection.rollback();
+
+                return res.status(403).json({
+                    success: false,
+                    message: 'You have overdue books. Please return them before making a new reservation.'
+                });
+            }
+        }
+
         const [existing] = await connection.execute(
             `SELECT reservation_id
              FROM Reservations
@@ -59,7 +220,6 @@ const createReservation = async (req, res, next) => {
             });
         }
 
-        // Student must not already be borrowing this book
         const [loans] = await connection.execute(
             `SELECT br.borrowing_id
              FROM Borrowings br
@@ -78,7 +238,6 @@ const createReservation = async (req, res, next) => {
             });
         }
 
-        // Decide: reserve now (pending) or join the waiting list (waiting)
         const [availableRows] = await connection.execute(
             `SELECT COUNT(*) AS total
              FROM BookCopies
@@ -223,9 +382,16 @@ const cancelReservation = async (req, res, next) => {
         await connection.beginTransaction();
 
         const [rows] = await connection.execute(
-            `SELECT reservation_id, copy_id, status
-             FROM Reservations
-             WHERE reservation_id = ? AND student_id = ?
+            `SELECT
+                r.reservation_id,
+                r.book_id,
+                r.copy_id,
+                r.status,
+                b.title
+             FROM Reservations r
+             JOIN Books b ON b.book_id = r.book_id
+             WHERE r.reservation_id = ?
+               AND r.student_id = ?
              FOR UPDATE`,
             [reservationId, req.user.userId]
         );
@@ -251,25 +417,46 @@ const cancelReservation = async (req, res, next) => {
         }
 
         await connection.execute(
-            `UPDATE Reservations SET status = 'cancelled'
+            `UPDATE Reservations
+             SET status = 'cancelled'
              WHERE reservation_id = ?`,
             [reservationId]
         );
 
-        // Free the held copy if the librarian had already allocated one
+        let nextReservation = null;
+
+        // Release the physical copy and allocate it to
+        // the next eligible waiting student.
         if (reservation.copy_id) {
-            await connection.execute(
-                `UPDATE BookCopies SET status = 'available'
-                 WHERE copy_id = ? AND status = 'reserved'`,
+
+            const [releaseResult] = await connection.execute(
+                `UPDATE BookCopies
+                 SET status = 'available'
+                 WHERE copy_id = ?
+                   AND status = 'reserved'`,
                 [reservation.copy_id]
             );
+
+            if (releaseResult.affectedRows === 1) {
+                nextReservation = await allocateCopyToNextWaitingStudent(
+                    connection,
+                    reservation.book_id,
+                    reservation.copy_id,
+                    reservation.title
+                );
+            }
         }
 
         await connection.commit();
 
         return res.status(200).json({
             success: true,
-            message: 'Reservation cancelled.'
+            message: nextReservation
+                ? 'Reservation cancelled. The next waiting student has been notified.'
+                : 'Reservation cancelled.',
+            next_reservation_id: nextReservation
+                ? nextReservation.reservation_id
+                : null
         });
 
     } catch (error) {
@@ -287,8 +474,446 @@ const cancelReservation = async (req, res, next) => {
 };
 
 
+// ==========================================
+// LIBRARIAN: GET ALL RESERVATIONS
+// ==========================================
+
+const getAllReservations = async (req, res, next) => {
+    try {
+        const [reservations] = await db.execute(
+            `SELECT
+                r.reservation_id,
+                r.student_id,
+                r.book_id,
+                r.copy_id,
+                r.status,
+                r.reserved_at,
+                r.ready_at,
+                r.pickup_deadline,
+                b.title,
+                b.authors,
+                b.isbn,
+                u.full_name AS student_name,
+                u.email AS student_email,
+                c.accession_number,
+                c.shelf_location
+             FROM Reservations r
+             JOIN Books b ON b.book_id = r.book_id
+             JOIN Users u ON u.user_id = r.student_id
+             LEFT JOIN BookCopies c ON c.copy_id = r.copy_id
+             ORDER BY
+                CASE
+                    WHEN r.status = 'pending' THEN 1
+                    WHEN r.status = 'waiting' THEN 2
+                    WHEN r.status = 'ready_for_pickup' THEN 3
+                    ELSE 4
+                END,
+                r.reserved_at ASC`
+        );
+
+        return res.status(200).json({
+            success: true,
+            count: reservations.length,
+            reservations
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+// ==========================================
+// LIBRARIAN: ALLOCATE COPY
+// ==========================================
+
+const allocateReservation = async (req, res, next) => {
+    let connection;
+
+    try {
+        const reservationId = Number(req.params.reservationId);
+
+        if (!Number.isInteger(reservationId) || reservationId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid reservation ID.'
+            });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        // Get reservation, book and student details.
+        const [rows] = await connection.execute(
+            `SELECT
+                r.reservation_id,
+                r.student_id,
+                r.book_id,
+                r.status,
+                b.is_archived,
+                u.role,
+                u.is_active
+             FROM Reservations r
+             JOIN Books b ON b.book_id = r.book_id
+             JOIN Users u ON u.user_id = r.student_id
+             WHERE r.reservation_id = ?
+             FOR UPDATE`,
+            [reservationId]
+        );
+
+        if (rows.length === 0) {
+            await connection.rollback();
+
+            return res.status(404).json({
+                success: false,
+                message: 'Reservation not found.'
+            });
+        }
+
+        const reservation = rows[0];
+
+        // Check reservation status.
+        if (!['pending', 'waiting'].includes(reservation.status)) {
+            await connection.rollback();
+
+            return res.status(400).json({
+                success: false,
+                message: 'This reservation cannot be allocated.'
+            });
+        }
+
+        // Archived books cannot receive allocations.
+        if (reservation.is_archived) {
+            await connection.rollback();
+
+            return res.status(409).json({
+                success: false,
+                message: 'Archived books cannot be allocated.'
+            });
+        }
+
+        // Only active student accounts are eligible.
+        if (
+            reservation.role !== 'student' ||
+            !reservation.is_active
+        ) {
+            await connection.rollback();
+
+            return res.status(403).json({
+                success: false,
+                message: 'This student is not eligible for allocation.'
+            });
+        }
+
+        // Check whether the student has already borrowed this book.
+        const [existingLoans] = await connection.execute(
+            `SELECT borrowing_id
+             FROM Borrowings br
+             JOIN BookCopies c ON c.copy_id = br.copy_id
+             WHERE br.student_id = ?
+               AND c.book_id = ?
+               AND br.status IN ('borrowed', 'overdue')
+               AND br.returned_at IS NULL`,
+            [reservation.student_id, reservation.book_id]
+        );
+
+        if (existingLoans.length > 0) {
+            await connection.rollback();
+
+            return res.status(409).json({
+                success: false,
+                message: 'This student has already borrowed this book.'
+            });
+        }
+
+        // Students with overdue books cannot receive allocations
+        // when the library policy blocks new reservations.
+        if (policy.BLOCK_NEW_RESERVATIONS_WHEN_OVERDUE) {
+            const [overdueLoans] = await connection.execute(
+                `SELECT borrowing_id
+                 FROM Borrowings
+                 WHERE student_id = ?
+                   AND status IN ('borrowed', 'overdue')
+                   AND returned_at IS NULL
+                   AND due_date < NOW()`,
+                [reservation.student_id]
+            );
+
+            if (overdueLoans.length > 0) {
+                await connection.rollback();
+
+                return res.status(403).json({
+                    success: false,
+                    message: 'This student has overdue books and is not eligible for allocation.'
+                });
+            }
+        }
+
+        // Maintain FIFO order among eligible waiting students.
+        if (reservation.status === 'waiting') {
+            const [firstWaiting] = await connection.execute(
+                `SELECT r.reservation_id
+                 FROM Reservations r
+                 JOIN Users u ON u.user_id = r.student_id
+                 WHERE r.book_id = ?
+                   AND r.status = 'waiting'
+                   AND u.role = 'student'
+                   AND u.is_active = 1
+
+                   AND NOT EXISTS (
+                       SELECT 1
+                       FROM Borrowings existing
+                       JOIN BookCopies existingCopy
+                         ON existingCopy.copy_id = existing.copy_id
+                       WHERE existing.student_id = r.student_id
+                         AND existingCopy.book_id = r.book_id
+                         AND existing.status IN ('borrowed', 'overdue')
+                         AND existing.returned_at IS NULL
+                   )
+
+                   AND (
+                       ? = 0
+                       OR NOT EXISTS (
+                           SELECT 1
+                           FROM Borrowings overdueLoan
+                           WHERE overdueLoan.student_id = r.student_id
+                             AND overdueLoan.status IN ('borrowed', 'overdue')
+                             AND overdueLoan.returned_at IS NULL
+                             AND overdueLoan.due_date < NOW()
+                       )
+                   )
+
+                 ORDER BY r.reserved_at ASC, r.reservation_id ASC
+                 LIMIT 1
+                 FOR UPDATE`,
+                [
+                    reservation.book_id,
+                    policy.BLOCK_NEW_RESERVATIONS_WHEN_OVERDUE ? 1 : 0
+                ]
+            );
+
+            if (
+                firstWaiting.length === 0 ||
+                firstWaiting[0].reservation_id !== reservationId
+            ) {
+                await connection.rollback();
+
+                return res.status(409).json({
+                    success: false,
+                    message: 'Please allocate the copy to the earliest eligible waiting student first.'
+                });
+            }
+        }
+
+        // Find an available physical copy.
+        const [copies] = await connection.execute(
+            `SELECT copy_id
+             FROM BookCopies
+             WHERE book_id = ? AND status = 'available'
+             ORDER BY copy_id ASC
+             LIMIT 1
+             FOR UPDATE`,
+            [reservation.book_id]
+        );
+
+        if (copies.length === 0) {
+            await connection.rollback();
+
+            return res.status(409).json({
+                success: false,
+                message: 'No available physical copies for this book.'
+            });
+        }
+
+        const copyId = copies[0].copy_id;
+
+        // Mark the copy as reserved.
+        await connection.execute(
+            `UPDATE BookCopies
+             SET status = 'reserved'
+             WHERE copy_id = ?`,
+            [copyId]
+        );
+
+        // Update the reservation.
+        await connection.execute(
+            `UPDATE Reservations
+             SET copy_id = ?,
+                 status = 'ready_for_pickup',
+                 ready_at = NOW(),
+                 pickup_deadline = DATE_ADD(
+                     NOW(),
+                     INTERVAL ? DAY
+                 )
+             WHERE reservation_id = ?`,
+            [
+                copyId,
+                policy.PICKUP_DEADLINE_DAYS,
+                reservationId
+            ]
+        );
+
+        // Notify the student.
+        await connection.execute(
+            `INSERT INTO Notifications
+             (user_id, notification_type, title, message, related_type, related_id)
+             VALUES (?, 'reservation', ?, ?, 'reservation', ?)`,
+            [
+                reservation.student_id,
+                'Book ready for pickup',
+                'Your reserved book is ready for collection.',
+                reservationId
+            ]
+        );
+
+        await connection.commit();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Copy allocated successfully. Reservation is ready for pickup.',
+            reservation_id: reservationId,
+            copy_id: copyId
+        });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        next(error);
+
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
+// ==========================================
+// LIBRARIAN: CANCEL RESERVATION
+// ==========================================
+
+const librarianCancelReservation = async (req, res, next) => {
+    let connection;
+
+    try {
+        const reservationId = Number(req.params.reservationId);
+
+        if (!Number.isInteger(reservationId) || reservationId <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid reservation ID.'
+            });
+        }
+
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+
+        const [rows] = await connection.execute(
+            `SELECT
+                r.reservation_id,
+                r.student_id,
+                r.book_id,
+                r.copy_id,
+                r.status,
+                b.title
+             FROM Reservations r
+             JOIN Books b ON b.book_id = r.book_id
+             WHERE r.reservation_id = ?
+             FOR UPDATE`,
+            [reservationId]
+        );
+
+        if (rows.length === 0) {
+            await connection.rollback();
+
+            return res.status(404).json({
+                success: false,
+                message: 'Reservation not found.'
+            });
+        }
+
+        const reservation = rows[0];
+
+        if (!ACTIVE_STATUSES.includes(reservation.status)) {
+            await connection.rollback();
+
+            return res.status(400).json({
+                success: false,
+                message: 'This reservation cannot be cancelled.'
+            });
+        }
+
+        await connection.execute(
+            `UPDATE Reservations
+             SET status = 'cancelled'
+             WHERE reservation_id = ?`,
+            [reservationId]
+        );
+
+        let nextReservation = null;
+
+        // Release the allocated copy and pass it to
+        // the next eligible waiting student.
+        if (reservation.copy_id) {
+
+            const [releaseResult] = await connection.execute(
+                `UPDATE BookCopies
+                 SET status = 'available'
+                 WHERE copy_id = ?
+                   AND status = 'reserved'`,
+                [reservation.copy_id]
+            );
+
+            if (releaseResult.affectedRows === 1) {
+                nextReservation = await allocateCopyToNextWaitingStudent(
+                    connection,
+                    reservation.book_id,
+                    reservation.copy_id,
+                    reservation.title
+                );
+            }
+        }
+
+        // Notify the student whose reservation was cancelled.
+        await connection.execute(
+            `INSERT INTO Notifications
+             (user_id, notification_type, title, message, related_type, related_id)
+             VALUES (?, 'reservation', ?, ?, 'reservation', ?)`,
+            [
+                reservation.student_id,
+                'Reservation cancelled',
+                'Your library reservation has been cancelled.',
+                reservationId
+            ]
+        );
+
+        await connection.commit();
+
+        return res.status(200).json({
+            success: true,
+            message: nextReservation
+                ? 'Reservation cancelled successfully. The next waiting student has been notified.'
+                : 'Reservation cancelled successfully.',
+            next_reservation_id: nextReservation
+                ? nextReservation.reservation_id
+                : null
+        });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        next(error);
+
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
+
+// ==========================================
+// EXPORT CONTROLLER FUNCTIONS
+// ==========================================
+
 module.exports = {
     createReservation,
     getMyReservations,
-    cancelReservation
+    cancelReservation,
+    getAllReservations,
+    allocateReservation,
+    librarianCancelReservation
 };

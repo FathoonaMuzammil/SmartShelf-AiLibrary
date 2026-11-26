@@ -8,7 +8,6 @@ import {
   Clock,
   Heart,
   Sparkles,
-  Users,
   Library,
   BookPlus,
   ClipboardList,
@@ -61,8 +60,9 @@ const navigation = {
   librarian: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/librarian/dashboard" },
     { label: "Manage Books", icon: BookOpen, path: "/librarian/books" },
-    { label: "Manage Users", icon: Users, path: "/librarian/users" },
+    { label: "Manage Copies", icon: BookOpen, path: "/librarian/copies" },
     { label: "Borrowings", icon: Library, path: "/librarian/borrowings" },
+    { label: "Overdue", icon: Clock, path: "/librarian/overdue" },
     { label: "Reservations", icon: Bookmark, path: "/librarian/reservations" },
     { label: "Reports", icon: BarChart3, path: "/librarian/reports" },
   ],
@@ -142,16 +142,26 @@ function DashboardSidebar({
 
       {/* Sidebar Bottom */}
       <div className="sidebar-bottom">
-        <Link
-          to={normalizedRole === "lecturer" ? "/lecturer/settings" : "/dashboard/settings"}
-          onClick={handleNavigation}
-          className="sidebar-nav-item"
-          title={!isOpen ? "Settings" : undefined}
-        >
-          <Settings size={19} strokeWidth={1.8} />
-          {isOpen && <span>Settings</span>}
-        </Link>
-                {normalizedRole === "lecturer" && (
+
+        {/* Settings - Hidden from librarian */}
+        {normalizedRole !== "librarian" && (
+          <Link
+            to={
+              normalizedRole === "lecturer"
+                ? "/lecturer/settings"
+                : "/dashboard/settings"
+            }
+            onClick={handleNavigation}
+            className="sidebar-nav-item"
+            title={!isOpen ? "Settings" : undefined}
+          >
+            <Settings size={19} strokeWidth={1.8} />
+            {isOpen && <span>Settings</span>}
+          </Link>
+        )}
+
+        {/* Lecturer Profile */}
+        {normalizedRole === "lecturer" && (
           <Link
             to="/lecturer/profile"
             onClick={handleNavigation}
@@ -163,15 +173,18 @@ function DashboardSidebar({
           </Link>
         )}
 
-        <Link
-          to="/help"
-          onClick={handleNavigation}
-          className="sidebar-nav-item"
-          title={!isOpen ? "Help & Support" : undefined}
-        >
-          <HelpCircle size={19} strokeWidth={1.8} />
-          {isOpen && <span>Help & Support</span>}
-        </Link>
+        {/* Help & Support - Hidden from librarian */}
+        {normalizedRole !== "librarian" && (
+          <Link
+            to="/help"
+            onClick={handleNavigation}
+            className="sidebar-nav-item"
+            title={!isOpen ? "Help & Support" : undefined}
+          >
+            <HelpCircle size={19} strokeWidth={1.8} />
+            {isOpen && <span>Help & Support</span>}
+          </Link>
+        )}
 
         {isOpen && (
           <div className="sidebar-footer">
